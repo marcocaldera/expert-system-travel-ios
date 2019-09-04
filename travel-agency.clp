@@ -15,6 +15,7 @@
 ;;* MODULO MAIN *
 ;;****************
 (defmodule MAIN (export ?ALL))
+
 ;;;** FUNCTION MODULO MAIN **
 
 (deffunction MAIN::ask-question (?question ?allowed-values)
@@ -37,10 +38,11 @@
 
 
 ;;;** TEMPLATE MODULO MAIN **
+
 (deftemplate MAIN::travel-banchmark
     (slot name)
     (slot value)
-    (slot certainty (default 100.0))
+    (slot certainty (type FLOAT) (range -1.0 +1.0) (default 1.0))
 )
 
 ;;;** REGOLE MODULO MAIN **
@@ -50,7 +52,7 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus QUESTIONS);Indico l'ordine dello stack focus
+    (focus QUESTIONS RULES);Indico l'ordine dello stack focus
 ;    (printout t "È un buon inizio")
 )
 
@@ -90,11 +92,13 @@
 
 
 ;;****************
-;;* USER QUESTIONS *
+;;* MODULO QUESTIONS *
+;;
+;; Modulo per gestire le domande da porre all'utente
 ;;****************
 (defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
 
-(deftemplate QUESTIONS::question "template delle domande da porre all'utente"
+(deftemplate QUESTIONS::question
     (slot travel-banchmark (default ?NONE))
     (slot the-question (default ?NONE))
     (multislot valid-answers (default ?NONE))
@@ -106,13 +110,15 @@
 ;;;** REGOLE MODULO QUESTIONS **
 
 (defrule QUESTIONS::ask-a-question
-    ?f <- (question (already-asked FALSE) ;se non ho ancora fatto la domanda
-        (precursors);se la domanda non ha precursori
-        (the-question ?the-question)
-        (travel-banchmark ?the-attribute)
-        (valid-answers $?valid-answers))
+    ?f <- (question
+;            (already-asked FALSE) ;se non ho ancora fatto la domanda
+            (precursors);se la domanda non ha precursori
+            (the-question ?the-question)
+            (travel-banchmark ?the-attribute)
+            (valid-answers $?valid-answers)
+    )
     =>
-    (modify ?f (already-asked TRUE)) ;indico che ho posto la domanda
+;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
     (assert (travel-banchmark (name ?the-attribute)
     (value (ask-question ?the-question ?valid-answers)))));creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question)
 
@@ -123,5 +129,99 @@
         (travel-banchmark travel-duration)
         (the-question "Quanto deve durare il viaggio?")
         (valid-answers number unknown)
+    )
+    (question
+        (travel-banchmark travel-budget)
+        (the-question "Quanto sei disposto a spendere?")
+        (valid-answers number unknown)
+    )
+    (question
+        (travel-banchmark people-number)
+        (the-question "Quante persone partecipano al viaggio?")
+        (valid-answers number unknown)
+    )
+)
+
+;;****************
+;;* MODULO RULES *
+;;
+;;
+;;****************
+(defmodule RULES (import MAIN ?ALL))
+
+;;;** TEMPLATE MODULO RULES **
+
+(deftemplate RULES::rule
+    (slot certainty (type FLOAT) (range -1.0 +1.0) (default 1.0))
+    (multislot if)
+    (multislot then)
+)
+
+;;;** REGOLE MODULO RULES ***********************************************************************
+
+;Quando una regola "rule" all'interno dell'if è soddisfatta la si elimina
+(defrule RULES::remove-if-condition-when-satisfied
+    ?f <- (rule
+        (certainty ?c1)
+        (if ?attribute is ?valueA $?rest)
+    )
+    (travel-banchmark
+        (name ?attribute)
+        (value ?valueB)
+        (certainty ?c2)
+    )
+    (test (or (eq ?valueA ?valueB) (and (eq ?valueA number) (integerp ?valueB)))); la condizione "if" va rimossa o se valueA=valueB oppure se l'attributo valueA è un numero e anche valueB lo è
+    =>
+    (modify ?f (certainty (min ?c1 ?c2)) (if ?rest)); se ?rest è vuoto rimane solo "if"
+)
+
+(defrule RULES::perform-rule-consequent-with-number
+    ?f <- (rule
+;        (certainty ?c1)
+        (if) ;non ci sono "if" quindi tutto l'if è stato soddisfatto
+        (then ?attribute is ?value with certainty ?c2 $?rest)
+    )
+    (travel-banchmark
+        (name ?attribute)
+        (value ?valueB)
+    )
+    (test (integerp ?valueB))
+    =>
+    (modify ?f (then ?rest))
+    (assert
+        (travel-banchmark
+            (name ?attribute)
+            (value (+ ?value ?valueB))
+;            (certainty (/ (* ?c1 ?c2) 100));il significato è: (c1*c2)/100
+        )
+    )
+)
+
+;;;** FATTI MODULO RULES ***********************************************************************
+
+(deffacts RULES::expert-rules
+    ; - Conoscenza empirica
+    ;Se una persona non indica la durata del viaggio
+    ;significa che ci sono maggiori possibilità che il viaggio sia breve
+    (rule
+        (if travel-duration is unknown)
+        (then travel-duration is 7 with certainty 0.6 and
+              travel-duration in 10 with certainty 0.3
+        )
+    )
+    ; - Conoscenza empirica
+    ;Se una persona non indica i componenti del viaggio
+    ;il sistema cosidera ci siano buone possibilità che il viaggio sia per quattro persone
+    (rule
+        (if people-number is unknown)
+        (then people-number is 4 with certainty 0.7 and
+            people-number is 6 with certainty 0.1
+        )
+    )
+    (rule
+        (if travel-budget is number)
+        (then travel-budget is -100 with certainty 0.4 and
+            travel-budget is +100 with certainty 0.7
+        )
     )
 )
