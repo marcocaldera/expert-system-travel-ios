@@ -43,6 +43,7 @@
     (slot name)
     (slot value)
     (slot certainty (type FLOAT) (range -1.0 +1.0) (default 1.0))
+    (slot inferred (default TRUE))
 )
 
 ;;;** REGOLE MODULO MAIN **
@@ -119,8 +120,14 @@
     )
     =>
 ;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
-    (assert (travel-banchmark (name ?the-attribute)
-    (value (ask-question ?the-question ?valid-answers)))));creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question)
+    (assert
+        (travel-banchmark
+            (name ?the-attribute)
+            (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
+            (inferred FALSE)
+        )
+    )
+)
 
 ;;;** FATTI MODULO QUESTIONS **
 
@@ -159,6 +166,12 @@
 
 ;;;** REGOLE MODULO RULES ***********************************************************************
 
+; cancella gli "and" che ci sono nei "then"
+(defrule RULES::throw-away-ands-in-consequent
+    ?f <- (rule (then and $?rest))
+    =>
+(modify ?f (then ?rest)))
+
 ;Quando una regola "rule" all'interno dell'if è soddisfatta la si elimina
 (defrule RULES::remove-if-condition-when-satisfied
     ?f <- (rule
@@ -175,24 +188,49 @@
     (modify ?f (certainty (min ?c1 ?c2)) (if ?rest)); se ?rest è vuoto rimane solo "if"
 )
 
-(defrule RULES::perform-rule-consequent-with-number
+;Crea un nuovo banchmark basato sulle regole empiriche definite
+(defrule RULES::perform-rule-consequent
     ?f <- (rule
-;        (certainty ?c1)
+        (certainty ?c1)
         (if) ;non ci sono "if" quindi tutto l'if è stato soddisfatto
         (then ?attribute is ?value with certainty ?c2 $?rest)
     )
+;    (travel-banchmark
+;        (name ?attribute)
+;        (value ?valueB)
+;    )
+;    (test (integerp ?value));il value dell'attributo è un intero
+    =>
+    (modify ?f (then ?rest))
+;    (if (integerp ?valueB) then (bind ?op-value ?valueB) else (bind ?op-value 0))
+    (assert
+        (travel-banchmark
+            (name ?attribute)
+;            (value (+ ?value ?op-value))
+            (value ?value)
+            (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
+        )
+    )
+)
+;Regola che permette di creare nuovi banchmark basandosi sul valore che l'utente ha inserito da terminale
+(defrule RULES::perform-rule-consequent-with-change
+    ?f <- (rule
+        (certainty ?c1)
+        (if)
+        (then ?attribute change ?value with certainty ?c2 $?rest)
+    )
     (travel-banchmark
         (name ?attribute)
-        (value ?valueB)
+        (value ?user-value)
+        (inferred FALSE)
     )
-    (test (integerp ?valueB))
     =>
     (modify ?f (then ?rest))
     (assert
         (travel-banchmark
             (name ?attribute)
-            (value (+ ?value ?valueB))
-;            (certainty (/ (* ?c1 ?c2) 100));il significato è: (c1*c2)/100
+            (value (+ ?value ?user-value))
+            (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
         )
     )
 )
@@ -206,7 +244,7 @@
     (rule
         (if travel-duration is unknown)
         (then travel-duration is 7 with certainty 0.6 and
-              travel-duration in 10 with certainty 0.3
+              travel-duration is 10 with certainty 0.3
         )
     )
     ; - Conoscenza empirica
@@ -220,8 +258,8 @@
     )
     (rule
         (if travel-budget is number)
-        (then travel-budget is -100 with certainty 0.4 and
-            travel-budget is +100 with certainty 0.7
+        (then travel-budget change -50 with certainty 0.4 and
+            travel-budget change +100 with certainty 0.7
         )
     )
 )
