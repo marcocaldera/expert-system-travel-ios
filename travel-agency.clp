@@ -172,7 +172,7 @@
     =>
 (modify ?f (then ?rest)))
 
-;Quando una regola "rule" all'interno dell'if è soddisfatta la si elimina
+;quando una condizone all'interno dell'if di una "rule" è soddisfatta la si elimina
 (defrule RULES::remove-if-condition-when-satisfied
     ?f <- (rule
         (certainty ?c1)
@@ -208,7 +208,7 @@
             (name ?attribute)
 ;            (value (+ ?value ?op-value))
             (value ?value)
-            (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
+            (certainty (* ?c1 ?c2));il prodotto di due probabilità mi indica la probabilità che si verifichino entrambe
         )
     )
 )
