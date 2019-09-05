@@ -53,7 +53,7 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus QUESTIONS RULES LOCATION TRIP);Indico l'ordine dello stack focus
+    (focus QUESTIONS RULES LOCATION);Indico l'ordine dello stack focus
 ;    (printout t "È un buon inizio")
 )
 
@@ -66,7 +66,14 @@
   (test (neq ?rem1 ?rem2));neq = not EQuals to
   =>
   (retract ?rem1);cancella rem1
-  (modify ?rem2 (certainty (- (+ ?c1 ?c2) (* ?c1 ?c2))));(c1+c2)-(c1*c2)
+  
+  (if (and (>= ?c1 0) (>= ?c2 0))
+    then (modify ?rem2 (certainty (- (+ ?c1 ?c2) (* ?c1 ?c2))));(c1+c2)-(c1*c2)
+    else (if (and (< ?c1 0) (< ?c2 0)) 
+        then (modify ?rem2 (certainty (+ (+ ?c1 ?c2) (* ?c1 ?c2))));(c1+c2)+(c1*c2)
+         else (modify ?rem2 (certainty (/ (+ ?c1 ?c2) (- 1 (min (abs ?c1) (abs ?c2))))));(c1+c2)/(1-min(|c1|,|c2|))
+        )
+    )
 )
 
 (deffacts MAIN::test-fact
@@ -74,7 +81,7 @@
     (travel-banchmark (name tourism-type) (value montano) (certainty 0.4))
     (travel-banchmark (name tourism-type) (value sportivo) (certainty 0.8))
     (travel-banchmark (name tourism-type) (value enogastronomico) (certainty 0.2))
-    (travel-banchmark (name resort-star) (value 3) (certainty 0.7))
+    ; (travel-banchmark (name min-resort-star) (value 3) (certainty 0.7))
     ; (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
     ; (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
     ; (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
@@ -128,8 +135,10 @@
         (star ?resort-star)
         (place-ID ?id)
     )
-    (travel-banchmark (name resort-star) (value ?resort-star) (certainty ?c1))
+    (travel-banchmark (name min-resort-star) (value ?min-resort-star) (certainty ?c1))
     (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
+
+    (test (>= ?resort-star ?min-resort-star))
     =>
     (assert
         (travel-banchmark
@@ -181,46 +190,14 @@
 ;;
 ;; Modulo per gestire i viaggi
 ;;****************
-(defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
+; (defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
 
-(defrule TRIP::bho
-
-    (travel-banchmark (name location) (value ?resort-name) (certainty ?c1))
-
-    (resort
-        (name ?resort-name)
-
-        (star ?resort-star)
-        (place-ID ?id)
-    )
-
-
-    (place 
-        (name ?place-name)
-        (region ?region)
-        (ID ?id)
-    )
-    (tourism-type 
-        (place-ID ?id)
-        (type ?tourism-type)
-        (score ?score)
-    )
-    (resort
-        (name ?resort-name)
-        (star ?resort-star)
-        (place-ID ?id)
-    )
-    (travel-banchmark (name resort-star) (value ?resort-star) (certainty ?c1))
-    (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
-    =>
-    (assert
-        (travel-banchmark
-            (name location);creiamo un banchmark di tipo location
-            (value ?resort-name)
-            (certainty (min ?c1 ?c2 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
-        )
-    )
-)
+; (defrule TRIP::bho
+;     (travel-banchmark (name location) (value ?value))
+;     (travel-banchmark (name location) (value ?value))
+;     =>
+    
+; )
 
 ;;****************
 ;;* MODULO QUESTIONS *
@@ -233,7 +210,7 @@
     (slot travel-banchmark (default ?NONE))
     (slot the-question (default ?NONE))
     (multislot valid-answers (default ?NONE))
-    (slot already-asked (default FALSE))
+    (slot already-asked (default FALSE));forse non serve
     (multislot precursors));possono anche non essercene
 )
 
@@ -276,6 +253,26 @@
         (travel-banchmark people-number)
         (the-question "Quante persone partecipano al viaggio?")
         (valid-answers number);l'inserimento è obbligatorio
+    )
+    (question
+        (travel-banchmark min-resort-star)
+        (the-question "Quante stelle deve almeno avere l'hotel?")
+        (valid-answers number unknown)
+    )
+    (question
+        (travel-banchmark place-number)
+        (the-question "Quante mete vuoi visitare?")
+        (valid-answers number unknown)
+    )
+    (question
+        (travel-banchmark trip-type)
+        (the-question "Preferisci una vacanza culturale o rilassante?")
+        (valid-answers culturale rilassante unknown)
+    )
+    (question
+        (travel-banchmark personal-trait)
+        (the-question "Preferisci di più vivere l'avventura o la comodità?")
+        (valid-answers avventura comodità unknown)
     )
 
     ;unknown
@@ -396,6 +393,44 @@
     ;         travel-budget change +100 with certainty 0.7
     ;     )
     ; )
+    ; - Conoscenza empirica
+    (rule
+        (if min-resort-star is unknown)
+        (then min-resort-star is 3 with certainty 1.0)
+    )
+    (rule
+        (if place-number is unknown)
+        (then place-number is 3 with certainty 1.0)
+    )
+    (rule
+        (if trip-type is culturale)
+        (then tourism-type is culturale with certainty 0.8 and 
+            tourism-type is religioso with certainty 0.5 and 
+            tourism-type is enogastronomico with certainty 0.4 and
+            tourism-type is balneare with certainty -0.4)
+    )
+    (rule
+        (if trip-type is rilassante)
+        (then tourism-type is balneare with certainty 0.8 and 
+            tourism-type is montano with certainty 0.8 and 
+            tourism-type is sportivo with certainty 0.2 and
+            tourism-type is termale with certainty 0.6 and
+            tourism-type is lacustre with certainty 0.6)
+    )
+    (rule
+        (if personal-trait is avventura)
+        (then tourism-type is naturalistico with certainty 0.8 and 
+            tourism-type is balneare with certainty -0.6 and 
+            tourism-type is sportivo with certainty 0.2 and
+            tourism-type is termale with certainty 0.6)
+    )
+    (rule
+        (if personal-trait is comodità)
+        (then tourism-type is balneare with certainty 0.8 and 
+            tourism-type is montano with certainty 0.8 and 
+            tourism-type is enogastronomico with certainty 0.6 and
+            tourism-type is naturalistico with certainty -0.4)
+    )
 )
 
 
