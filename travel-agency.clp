@@ -53,12 +53,12 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus QUESTIONS RULES TRIP);Indico l'ordine dello stack focus
+    (focus QUESTIONS RULES LOCATION TRIP);Indico l'ordine dello stack focus
 ;    (printout t "È un buon inizio")
 )
 
 
-;COMBINA INSIEME I CF dei travel-banchmark che hanno stesso nome e value
+;Combina insieme i cf dei travel-banchmark che hanno stesso nome e value
 (defrule MAIN::combine-certainties
   (declare (salience 100) (auto-focus TRUE))
   ?rem1 <- (travel-banchmark (name ?rel) (value ?val) (certainty ?c1))
@@ -75,44 +75,44 @@
     (travel-banchmark (name tourism-type) (value sportivo) (certainty 0.8))
     (travel-banchmark (name tourism-type) (value enogastronomico) (certainty 0.2))
     (travel-banchmark (name resort-star) (value 3) (certainty 0.7))
-    (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
-    (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
-    (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
-    (travel-banchmark (name travel-region) (value puglia) (certainty 0.1))
+    ; (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
+    ; (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
+    ; (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
+    ; (travel-banchmark (name travel-region) (value puglia) (certainty 0.1))
 )
 
 
 ;;****************
-;;* MODULO TRIP *
+;;* MODULO LOCATION *
 ;;****************
-(defmodule TRIP (import MAIN ?ALL))
+(defmodule LOCATION (import MAIN ?ALL) (export ?ALL))
 
 ;Località turistiche presenti sul territorio italiano
-(deftemplate TRIP::place
+(deftemplate LOCATION::place
     (slot name (default ?NONE));?NONE indica che il campo name è obbligatorio
     (slot region)
     (slot ID)
     (multislot coordinates (cardinality 2 2))
 )
 
-(deftemplate TRIP::tourism-type
+(deftemplate LOCATION::tourism-type
     (slot place-ID)
     (slot type)
     (slot score)
 )
 
 ;Alberghi presenti sul territorio italiano
-(deftemplate TRIP::resort
+(deftemplate LOCATION::resort
     (slot name (default ?NONE));?NONE indica che il campo name è obbligatorio
     (slot star);stelle dell'albergo
     (slot rooms-number);numero di camere disponibili nell'hotel
     (slot place-ID);nome della località turistica
 )
 
-;;;** REGOLE MODULO TRIP ***********************************************************************
+;;;** REGOLE MODULO LOCATION ***********************************************************************
 
 ;Regola che permette di definire il grado di approrpiatezza di una location rispetto ai banchmark inseriti dall'utente
-(defrule TRIP::select-location
+(defrule LOCATION::select-location
     (place 
         (name ?place-name)
         (region ?region)
@@ -141,9 +141,9 @@
 )
 
 
-;;;** FATTI MODULO TRIP ***********************************************************************
+;;;** FATTI MODULO LOCATION ***********************************************************************
 
-(deffacts TRIP::place-list
+(deffacts LOCATION::place-list
     (place (name rapallo) (region liguria) (coordinates 3 4) (ID 1))
     (tourism-type (place-ID 1) (type balneare) (score 5))
     (tourism-type (place-ID 1) (type montano) (score 3))
@@ -152,13 +152,14 @@
     (tourism-type (place-ID 2) (type balneare) (score 5))
     (tourism-type (place-ID 2) (type montano) (score 2))
     (tourism-type (place-ID 2) (type sportivo) (score 4))
+    (tourism-type (place-ID 2) (type enogastronomico) (score 2))
 
     (place (name alassio) (region liguria) (coordinates 3 4) (ID 3))
     (tourism-type (place-ID 3) (type balneare) (score 5))
     (tourism-type (place-ID 3) (type montano) (score 2))
 )
 
-(deffacts TRIP::resort-list
+(deffacts LOCATION::resort-list
     (resort (name resort-1a) (star 3) (rooms-number 10) (place-ID 1))
     (resort (name resort-1b) (star 2) (rooms-number 4) (place-ID 1))
     (resort (name resort-1c) (star 3) (rooms-number 6) (place-ID 1))
@@ -175,6 +176,51 @@
     (resort (name resort-3d) (star 3) (rooms-number 3) (place-ID 3))
 )
 
+;;****************
+;;* MODULO TRIP *
+;;
+;; Modulo per gestire i viaggi
+;;****************
+(defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
+
+(defrule TRIP::bho
+
+    (travel-banchmark (name location) (value ?resort-name) (certainty ?c1))
+
+    (resort
+        (name ?resort-name)
+
+        (star ?resort-star)
+        (place-ID ?id)
+    )
+
+
+    (place 
+        (name ?place-name)
+        (region ?region)
+        (ID ?id)
+    )
+    (tourism-type 
+        (place-ID ?id)
+        (type ?tourism-type)
+        (score ?score)
+    )
+    (resort
+        (name ?resort-name)
+        (star ?resort-star)
+        (place-ID ?id)
+    )
+    (travel-banchmark (name resort-star) (value ?resort-star) (certainty ?c1))
+    (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
+    =>
+    (assert
+        (travel-banchmark
+            (name location);creiamo un banchmark di tipo location
+            (value ?resort-name)
+            (certainty (min ?c1 ?c2 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
+        )
+    )
+)
 
 ;;****************
 ;;* MODULO QUESTIONS *
@@ -219,21 +265,22 @@
     (question
         (travel-banchmark travel-duration)
         (the-question "Quanto deve durare il viaggio?")
-        (valid-answers number unknown)
+        (valid-answers number);l'inserimento è obbligatorio
     )
     (question
         (travel-banchmark travel-budget)
         (the-question "Quanto sei disposto a spendere?")
-        (valid-answers number unknown)
+        (valid-answers number);l'inserimento è obbligatorio
     )
     (question
         (travel-banchmark people-number)
         (the-question "Quante persone partecipano al viaggio?")
-        (valid-answers number unknown)
+        (valid-answers number);l'inserimento è obbligatorio
     )
+
+    ;unknown
     ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
     ;regione che non si vuole visitare? (certainty -1.0)
-    ;vacanza monotematica? (precondizioni per evitare che possano poi esserci altre opzioni)
 )
 
 ;;****************
@@ -300,27 +347,27 @@
     )
 )
 ;Regola che permette di creare nuovi banchmark basandosi sul valore che l'utente ha inserito da terminale
-(defrule RULES::perform-rule-consequent-with-change
-    ?f <- (rule
-        (certainty ?c1)
-        (if)
-        (then ?attribute change ?value with certainty ?c2 $?rest)
-    )
-    (travel-banchmark
-        (name ?attribute)
-        (value ?user-value)
-        (inferred FALSE)
-    )
-    =>
-    (modify ?f (then ?rest))
-    (assert
-        (travel-banchmark
-            (name ?attribute)
-            (value (+ ?value ?user-value))
-            (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
-        )
-    )
-)
+; (defrule RULES::perform-rule-consequent-with-change
+;     ?f <- (rule
+;         (certainty ?c1)
+;         (if)
+;         (then ?attribute change ?value with certainty ?c2 $?rest)
+;     )
+;     (travel-banchmark
+;         (name ?attribute)
+;         (value ?user-value)
+;         (inferred FALSE)
+;     )
+;     =>
+;     (modify ?f (then ?rest))
+;     (assert
+;         (travel-banchmark
+;             (name ?attribute)
+;             (value (+ ?value ?user-value))
+;             (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
+;         )
+;     )
+; )
 
 ;;;** FATTI MODULO RULES ***********************************************************************
 
@@ -328,27 +375,27 @@
     ; - Conoscenza empirica
     ;Se una persona non indica la durata del viaggio
     ;significa che ci sono maggiori possibilità che il viaggio sia breve
-    (rule
-        (if travel-duration is unknown)
-        (then travel-duration is 7 with certainty 0.6 and
-              travel-duration is 10 with certainty 0.3
-        )
-    )
+    ; (rule
+    ;     (if travel-duration is unknown)
+    ;     (then travel-duration is 7 with certainty 0.6 and
+    ;           travel-duration is 10 with certainty 0.3
+    ;     )
+    ; )
     ; - Conoscenza empirica
     ;Se una persona non indica i componenti del viaggio
     ;il sistema cosidera ci siano buone possibilità che il viaggio sia per quattro persone
-    (rule
-        (if people-number is unknown)
-        (then people-number is 4 with certainty 0.7 and
-            people-number is 6 with certainty 0.1
-        )
-    )
-    (rule
-        (if travel-budget is number)
-        (then travel-budget change -50 with certainty 0.4 and
-            travel-budget change +100 with certainty 0.7
-        )
-    )
+    ; (rule
+    ;     (if people-number is unknown)
+    ;     (then people-number is 4 with certainty 0.7 and
+    ;         people-number is 6 with certainty 0.1
+    ;     )
+    ; )
+    ; (rule
+    ;     (if travel-budget is number)
+    ;     (then travel-budget change -50 with certainty 0.4 and
+    ;         travel-budget change +100 with certainty 0.7
+    ;     )
+    ; )
 )
 
 
