@@ -76,17 +76,17 @@
     )
 )
 
-(deffacts MAIN::test-fact
-    (travel-banchmark (name tourism-type) (value balneare) (certainty 0.7))
-    (travel-banchmark (name tourism-type) (value montano) (certainty 0.4))
-    (travel-banchmark (name tourism-type) (value sportivo) (certainty 0.8))
-    (travel-banchmark (name tourism-type) (value enogastronomico) (certainty 0.2))
-    ; (travel-banchmark (name min-resort-star) (value 3) (certainty 0.7))
-    ; (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
-    ; (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
-    ; (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
-    ; (travel-banchmark (name travel-region) (value puglia) (certainty 0.1))
-)
+; (deffacts MAIN::test-fact
+;     (travel-banchmark (name tourism-type) (value balneare) (certainty 0.7))
+;     (travel-banchmark (name tourism-type) (value montano) (certainty 0.4))
+;     (travel-banchmark (name tourism-type) (value sportivo) (certainty 0.8))
+;     (travel-banchmark (name tourism-type) (value enogastronomico) (certainty 0.2))
+;     ; (travel-banchmark (name min-resort-star) (value 3) (certainty 0.7))
+;     ; (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
+;     ; (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
+;     ; (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
+;     ; (travel-banchmark (name travel-region) (value puglia) (certainty 0.1))
+; )
 
 
 ;;****************
@@ -260,7 +260,7 @@
         (valid-answers number unknown)
     )
     (question
-        (travel-banchmark place-number)
+        (travel-banchmark visit-place-number)
         (the-question "Quante mete vuoi visitare?")
         (valid-answers number unknown)
     )
@@ -399,8 +399,8 @@
         (then min-resort-star is 3 with certainty 1.0)
     )
     (rule
-        (if place-number is unknown)
-        (then place-number is 3 with certainty 1.0)
+        (if visit-place-number is unknown)
+        (then visit-place-number is 3 with certainty 1.0)
     )
     (rule
         (if trip-type is culturale)
