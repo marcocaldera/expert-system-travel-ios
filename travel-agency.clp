@@ -36,6 +36,50 @@
     ?answer;return
 )
 
+(deffunction atan2 (?y ?x)
+
+    (if (> ?x 0) then (bind ?answer (atan (/ ?y ?x))))
+    (if (and (< ?x 0) (>= ?y 0)) then (bind ?answer (+ (atan (/ ?y ?x)) (pi))))
+    (if (and (< ?x 0) (< ?y 0)) then (bind ?answer (- (atan (/ ?y ?x)) (pi))))
+    (if (and (= ?x 0) (> ?y 0)) then (bind ?answer (/ (pi) 2)))
+    (if (and (= ?x 0) (< ?y 0)) then (bind ?answer (/ (pi) -2)))
+
+    ?answer
+)
+
+(deffunction distance (?lat1 ?lat2 ?lon1 ?lon2)
+
+    (bind ?r 6371)
+    (bind ?lat (deg-rad (- ?lat2 ?lat1)))
+    (bind ?lon (deg-rad (- ?lon2 ?lon1)))
+
+    (bind ?a (+ 
+        (* 
+            (sin (/ ?lat 2)) 
+            (sin (/ ?lat 2))
+        ) 
+        (* 
+            (* 
+                (cos (deg-rad ?lat1))
+                (cos (deg-rad ?lat2))
+            )
+            (* 
+                (sin (/ ?lon 2))
+                (sin (/ ?lon 2))
+            )
+        )
+    ))
+    (bind ?c (* 
+        2
+        (atan2 (sqrt ?a) (sqrt (- 1 ?a)))
+    ))
+
+    (bind ?d (* ?r ?c))
+
+    ?d
+)
+
+
 
 ;;;** TEMPLATE MODULO MAIN **
 
@@ -119,6 +163,10 @@
 ;;;** REGOLE MODULO LOCATION ***********************************************************************
 
 ;Regola che permette di definire il grado di approrpiatezza di una location rispetto ai banchmark inseriti dall'utente
+;
+;Escludo i resort con resort-start < di min-resort-star
+;Escludo i resort che non hanno tourism type in comune con i banchmark
+;Declasso i resort che non sono nella fav-region (se questa è stata inserita)
 (defrule LOCATION::select-location
     (place 
         (name ?place-name)
@@ -135,18 +183,31 @@
         (star ?resort-star)
         (place-ID ?id)
     )
-    (travel-banchmark (name min-resort-star) (value ?min-resort-star) (certainty ?c1))
+    (travel-banchmark (name min-resort-star) (value ?min-resort-star&~unknown) (certainty ?c1))
     (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
+    (travel-banchmark (name favourite-region) (value ?fav-region) (certainty ?c3))
 
     (test (>= ?resort-star ?min-resort-star))
     =>
+    ;se il place è in una regione non scelta facciamo un downgrade
+    (if (and (neq ?fav-region ?region) (neq ?fav-region unknown))
+        then (assert
+                (travel-banchmark
+                    (name location);creiamo un banchmark di tipo location
+                    (value ?resort-name)
+                    (certainty -0.3)
+                )
+            )
+    )
+
     (assert
         (travel-banchmark
             (name location);creiamo un banchmark di tipo location
             (value ?resort-name)
-            (certainty (min ?c1 ?c2 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
+            (certainty (min ?c1 ?c2 ?c3 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
         )
     )
+
 )
 
 
@@ -163,7 +224,7 @@
     (tourism-type (place-ID 2) (type sportivo) (score 4))
     (tourism-type (place-ID 2) (type enogastronomico) (score 2))
 
-    (place (name alassio) (region liguria) (coordinates 3 4) (ID 3))
+    (place (name alassio) (region piemonte) (coordinates 3 4) (ID 3))
     (tourism-type (place-ID 3) (type balneare) (score 5))
     (tourism-type (place-ID 3) (type montano) (score 2))
 )
@@ -260,7 +321,7 @@
         (valid-answers number unknown)
     )
     (question
-        (travel-banchmark visit-place-number)
+        (travel-banchmark number-of-place)
         (the-question "Quante mete vuoi visitare?")
         (valid-answers number unknown)
     )
@@ -273,6 +334,11 @@
         (travel-banchmark personal-trait)
         (the-question "Preferisci di più vivere l'avventura o la comodità?")
         (valid-answers avventura comodità unknown)
+    )
+    (question
+        (travel-banchmark favourite-region)
+        (the-question "Quale regione preferisci?")
+        (valid-answers piemonte liguria unknown)
     )
 
     ;unknown
@@ -326,88 +392,34 @@
         (if) ;non ci sono "if" quindi tutto l'if è stato soddisfatto
         (then ?attribute is ?value with certainty ?c2 $?rest)
     )
-;    (travel-banchmark
-;        (name ?attribute)
-;        (value ?valueB)
-;    )
-;    (test (integerp ?value));il value dell'attributo è un intero
     =>
     (modify ?f (then ?rest))
-;    (if (integerp ?valueB) then (bind ?op-value ?valueB) else (bind ?op-value 0))
     (assert
         (travel-banchmark
             (name ?attribute)
-;            (value (+ ?value ?op-value))
             (value ?value)
             (certainty (* ?c1 ?c2));il prodotto di due probabilità mi indica la probabilità che si verifichino entrambe
         )
     )
 )
-;Regola che permette di creare nuovi banchmark basandosi sul valore che l'utente ha inserito da terminale
-; (defrule RULES::perform-rule-consequent-with-change
-;     ?f <- (rule
-;         (certainty ?c1)
-;         (if)
-;         (then ?attribute change ?value with certainty ?c2 $?rest)
-;     )
-;     (travel-banchmark
-;         (name ?attribute)
-;         (value ?user-value)
-;         (inferred FALSE)
-;     )
-;     =>
-;     (modify ?f (then ?rest))
-;     (assert
-;         (travel-banchmark
-;             (name ?attribute)
-;             (value (+ ?value ?user-value))
-;             (certainty (/ (* ?c1 ?c2) 1.0));il significato è: (c1*c2)/100
-;         )
-;     )
-; )
 
 ;;;** FATTI MODULO RULES ***********************************************************************
 
 (deffacts RULES::expert-rules
-    ; - Conoscenza empirica
-    ;Se una persona non indica la durata del viaggio
-    ;significa che ci sono maggiori possibilità che il viaggio sia breve
-    ; (rule
-    ;     (if travel-duration is unknown)
-    ;     (then travel-duration is 7 with certainty 0.6 and
-    ;           travel-duration is 10 with certainty 0.3
-    ;     )
-    ; )
-    ; - Conoscenza empirica
-    ;Se una persona non indica i componenti del viaggio
-    ;il sistema cosidera ci siano buone possibilità che il viaggio sia per quattro persone
-    ; (rule
-    ;     (if people-number is unknown)
-    ;     (then people-number is 4 with certainty 0.7 and
-    ;         people-number is 6 with certainty 0.1
-    ;     )
-    ; )
-    ; (rule
-    ;     (if travel-budget is number)
-    ;     (then travel-budget change -50 with certainty 0.4 and
-    ;         travel-budget change +100 with certainty 0.7
-    ;     )
-    ; )
-    ; - Conoscenza empirica
     (rule
         (if min-resort-star is unknown)
         (then min-resort-star is 3 with certainty 1.0)
     )
     (rule
-        (if visit-place-number is unknown)
-        (then visit-place-number is 3 with certainty 1.0)
+        (if number-of-place is unknown)
+        (then number-of-place is 3 with certainty 1.0)
     )
     (rule
         (if trip-type is culturale)
-        (then tourism-type is culturale with certainty 0.8 and 
+        (then tourism-type is culturale with certainty 1.0 and 
             tourism-type is religioso with certainty 0.5 and 
             tourism-type is enogastronomico with certainty 0.4 and
-            tourism-type is balneare with certainty -0.4)
+            tourism-type is balneare with certainty -0.2)
     )
     (rule
         (if trip-type is rilassante)
@@ -420,7 +432,7 @@
     (rule
         (if personal-trait is avventura)
         (then tourism-type is naturalistico with certainty 0.8 and 
-            tourism-type is balneare with certainty -0.6 and 
+            tourism-type is balneare with certainty -0.3 and 
             tourism-type is sportivo with certainty 0.2 and
             tourism-type is termale with certainty 0.6)
     )
@@ -429,7 +441,7 @@
         (then tourism-type is balneare with certainty 0.8 and 
             tourism-type is montano with certainty 0.8 and 
             tourism-type is enogastronomico with certainty 0.6 and
-            tourism-type is naturalistico with certainty -0.4)
+            tourism-type is naturalistico with certainty -0.1)
     )
 )
 
