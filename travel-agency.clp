@@ -36,7 +36,7 @@
     ?answer;return
 )
 
-(deffunction atan2 (?y ?x)
+(deffunction MAIN::atan2 (?y ?x)
 
     (if (> ?x 0) then (bind ?answer (atan (/ ?y ?x))))
     (if (and (< ?x 0) (>= ?y 0)) then (bind ?answer (+ (atan (/ ?y ?x)) (pi))))
@@ -47,7 +47,7 @@
     ?answer
 )
 
-(deffunction distance (?lat1 ?lat2 ?lon1 ?lon2)
+(deffunction MAIN::km-distance (?lat1 ?lat2 ?lon1 ?lon2)
 
     (bind ?r 6371)
     (bind ?lat (deg-rad (- ?lat2 ?lat1)))
@@ -97,7 +97,7 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus QUESTIONS RULES LOCATION);Indico l'ordine dello stack focus
+    (focus QUESTIONS RULES LOCATION TRIP);Indico l'ordine dello stack focus
 ;    (printout t "È un buon inizio")
 )
 
@@ -165,9 +165,10 @@
 ;Regola che permette di definire il grado di approrpiatezza di una location rispetto ai banchmark inseriti dall'utente
 ;
 ;Escludo i resort con resort-start < di min-resort-star
+;Escludo i resort in cui non ci possono stare tutte le persone del viaggio insieme
 ;Escludo i resort che non hanno tourism type in comune con i banchmark
 ;Declasso i resort che non sono nella fav-region (se questa è stata inserita)
-(defrule LOCATION::select-location
+(defrule LOCATION::select-location  
     (place 
         (name ?place-name)
         (region ?region)
@@ -182,12 +183,15 @@
         (name ?resort-name)
         (star ?resort-star)
         (place-ID ?id)
+        (rooms-number ?rooms-number)
     )
     (travel-banchmark (name min-resort-star) (value ?min-resort-star&~unknown) (certainty ?c1))
     (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
     (travel-banchmark (name favourite-region) (value ?fav-region) (certainty ?c3))
+    (travel-banchmark (name people-number) (value ?people-number) (certainty ?c4))
 
     (test (>= ?resort-star ?min-resort-star))
+    (test (>= (* ?rooms-number 2) ?people-number));Escludo i resort che non hanno abbastanza stanze
     =>
     ;se il place è in una regione non scelta facciamo un downgrade
     (if (and (neq ?fav-region ?region) (neq ?fav-region unknown))
@@ -204,7 +208,7 @@
         (travel-banchmark
             (name location);creiamo un banchmark di tipo location
             (value ?resort-name)
-            (certainty (min ?c1 ?c2 ?c3 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
+            (certainty (min ?c1 ?c2 ?c3 ?c4 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
         )
     )
 
@@ -214,23 +218,27 @@
 ;;;** FATTI MODULO LOCATION ***********************************************************************
 
 (deffacts LOCATION::place-list
-    (place (name rapallo) (region liguria) (coordinates 3 4) (ID 1))
+    (place (name rapallo) (region liguria) (coordinates 44.352200 9.230800) (ID 1))
     (tourism-type (place-ID 1) (type balneare) (score 5))
     (tourism-type (place-ID 1) (type montano) (score 3))
     
-    (place (name diano) (region liguria) (coordinates 3 4) (ID 2))
+    (place (name diano) (region liguria) (coordinates 43.909890 8.081830) (ID 2))
     (tourism-type (place-ID 2) (type balneare) (score 5))
     (tourism-type (place-ID 2) (type montano) (score 2))
     (tourism-type (place-ID 2) (type sportivo) (score 4))
     (tourism-type (place-ID 2) (type enogastronomico) (score 2))
 
-    (place (name alassio) (region piemonte) (coordinates 3 4) (ID 3))
+    (place (name alassio) (region liguria) (coordinates 44.014336 8.181174) (ID 3))
     (tourism-type (place-ID 3) (type balneare) (score 5))
     (tourism-type (place-ID 3) (type montano) (score 2))
+
+    (place (name cuneo) (region piemonte) (coordinates 44.384476 7.542671) (ID 4))
+    (tourism-type (place-ID 4) (type balneare) (score 1))
+    (tourism-type (place-ID 4) (type montano) (score 4))
 )
 
 (deffacts LOCATION::resort-list
-    (resort (name resort-1a) (star 3) (rooms-number 10) (place-ID 1))
+    (resort (name resort-1a) (star 3) (rooms-number 9) (place-ID 1))
     (resort (name resort-1b) (star 2) (rooms-number 4) (place-ID 1))
     (resort (name resort-1c) (star 3) (rooms-number 6) (place-ID 1))
     (resort (name resort-1d) (star 3) (rooms-number 3) (place-ID 1))
@@ -242,8 +250,13 @@
 
     (resort (name resort-3a) (star 3) (rooms-number 3) (place-ID 3))
     (resort (name resort-3b) (star 2) (rooms-number 6) (place-ID 3))
-    (resort (name resort-3c) (star 2) (rooms-number 2) (place-ID 3))
-    (resort (name resort-3d) (star 3) (rooms-number 3) (place-ID 3))
+    (resort (name resort-3a) (star 3) (rooms-number 2) (place-ID 3))
+    (resort (name resort-3b) (star 3) (rooms-number 3) (place-ID 3))
+
+    (resort (name resort-4a) (star 3) (rooms-number 4) (place-ID 4))
+    (resort (name resort-4b) (star 3) (rooms-number 7) (place-ID 4))
+    (resort (name resort-4a) (star 2) (rooms-number 6) (place-ID 4))
+    (resort (name resort-4b) (star 4) (rooms-number 3) (place-ID 4))
 )
 
 ;;****************
@@ -251,12 +264,101 @@
 ;;
 ;; Modulo per gestire i viaggi
 ;;****************
-; (defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
+(defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
+
+; (deftemplate TRIP::trip
+;     (multislot resort-sequence)
+; )
+
+(deftemplate TRIP::link
+    (slot resort1)
+    (slot resort2)
+    (slot distance)
+)
+(deftemplate TRIP::trip
+   (multislot values)
+)
+
+(defrule first-in-permutation
+    ; (travel-banchmark (name number-of-place) (value ?k))
+   ; (k-combination ~0)
+   (travel-banchmark (name location) (value ?city))
+   =>
+   (assert (trip (values ?city)))
+)
+
+(defrule next-in-permutation
+    (travel-banchmark (name number-of-place) (value ?k))
+   ; (k-combination ?k)
+   ?p <- (trip (values $?cities))
+
+   (test (< (length$ ?cities) ?k))
+   (travel-banchmark (name location) (value ?city))
+
+   (test (not (member$ ?city ?cities)))
+   =>
+   (assert (trip (values ?cities ?city)))
+)
+
+(defrule cleanup
+   (declare (salience -5))
+   (travel-banchmark (name number-of-place) (value ?k))
+   ; (k-combination ?k)
+   ?p <- (trip (values $?cities))
+   (test (< (length$ ?cities) ?k))
+   =>
+   (retract ?p)
+)
+
+
+(defrule TRIP::good-link
+    (travel-banchmark (name location) (value ?resort1))
+    (travel-banchmark (name location) (value ?resort2))
+
+    (resort (name ?resort1) (place-ID ?id1))
+    (resort (name ?resort2) (place-ID ?id2))
+
+    (place (ID ?id1) (coordinates ?lat1 ?lon1))
+    (place (ID ?id1) (coordinates ?lat2 ?lon2))
+
+    (test (neq ?resort1 ?resort2));non calcolo la distanza sullo stesso resort (ovviamente)
+    =>
+    (printout t ?resort1 ?lat1 ?resort2 ?lat2 crlf)
+    (assert (link 
+        (resort1 ?resort1)
+        (resort2 ?resort2)
+        (distance (km-distance ?lat1 ?lat2 ?lon1 ?lon2))
+    ))
+
+)
 
 ; (defrule TRIP::bho
-;     (travel-banchmark (name location) (value ?value))
-;     (travel-banchmark (name location) (value ?value))
+;     ; (travel-banchmark (name travel-budget) (value ?budget))
+;     ; (travel-banchmark (name travel-duration) (value ?duration))
+;     ; (travel-banchmark (name people-number) (value ?people-number))
+
 ;     =>
+;     (bind ?all-location (find-all-facts ((?f travel-banchmark)) (eq ?f:name location)))
+;     ; (do-for-all-facts ((?f travel-banchmark)) (eq ?f:name location) (printout t ?f:value crlf))
+
+;     ; (bind ?length (length ?all-location))
+;     ; (printout t (length ?all-location) crlf)
+;     ; (printout t (nth ?length ?all-location) crlf)
+
+;     (foreach ?loc ?all-location
+;       (assert (trip (resort-sequence ?loc)))
+;     )
+
+;     ; (loop-for-count (?all-location 1 ?length) do
+;     ;     (assert (trip (resort-sequence )))
+;     ;     ; (loop-for-count (?cnt2 1 3) do
+;     ;     ;     (printout t ?cnt1 " " ?cnt2 crlf)
+;     ;     ; )
+;     ; )
+
+
+;     ; (do-for-all-facts ((?f student)) TRUE
+;     ;   (printout t ?f:name crlf)))
     
 ; )
 
