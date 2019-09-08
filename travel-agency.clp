@@ -276,61 +276,76 @@
     (slot distance)
 )
 (deftemplate TRIP::trip
-   (multislot values)
+   (multislot resort-sequence)
+   (multislot place-sequence)
+   (multislot certainties)
 )
 
 (defrule first-in-permutation
     ; (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ~0)
-   (travel-banchmark (name location) (value ?city))
+   (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
+
+   (resort (name ?resort-name) (place-ID ?ID))
+   (place (name ?city) (ID ?ID))
    =>
-   (assert (trip (values ?city)))
+   (assert (trip (resort-sequence ?resort-name) (place-sequence ?city) (certainties ?c)))
 )
 
 (defrule next-in-permutation
     (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ?k)
-   ?p <- (trip (values $?cities))
+   ?p <- (trip (resort-sequence $?resorts) (place-sequence $?cities) (certainties $?certainties))
 
+   ; (test (< (length$ ?resorts) ?k))
    (test (< (length$ ?cities) ?k))
-   (travel-banchmark (name location) (value ?city))
 
+   (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
+   (resort (name ?resort-name) (place-ID ?ID))
+   (place (name ?city) (ID ?ID))
+
+   ; (test (not (member$ ?resort-name ?resorts)))
    (test (not (member$ ?city ?cities)))
    =>
-   (assert (trip (values ?cities ?city)))
+   (assert (trip 
+    (resort-sequence ?resorts ?resort-name)
+    (place-sequence ?cities ?city)
+    (certainties ?certainties ?c)
+    )
+   )
 )
 
 (defrule cleanup
    (declare (salience -5))
    (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ?k)
-   ?p <- (trip (values $?cities))
+   ?p <- (trip (resort-sequence $?cities))
    (test (< (length$ ?cities) ?k))
    =>
    (retract ?p)
 )
 
 
-(defrule TRIP::good-link
-    (travel-banchmark (name location) (value ?resort1))
-    (travel-banchmark (name location) (value ?resort2))
+; (defrule TRIP::good-link
+;     (travel-banchmark (name location) (value ?resort1))
+;     (travel-banchmark (name location) (value ?resort2))
 
-    (resort (name ?resort1) (place-ID ?id1))
-    (resort (name ?resort2) (place-ID ?id2))
+;     (resort (name ?resort1) (place-ID ?id1))
+;     (resort (name ?resort2) (place-ID ?id2))
 
-    (place (ID ?id1) (coordinates ?lat1 ?lon1))
-    (place (ID ?id1) (coordinates ?lat2 ?lon2))
+;     (place (ID ?id1) (coordinates ?lat1 ?lon1))
+;     (place (ID ?id1) (coordinates ?lat2 ?lon2))
 
-    (test (neq ?resort1 ?resort2));non calcolo la distanza sullo stesso resort (ovviamente)
-    =>
-    (printout t ?resort1 ?lat1 ?resort2 ?lat2 crlf)
-    (assert (link 
-        (resort1 ?resort1)
-        (resort2 ?resort2)
-        (distance (km-distance ?lat1 ?lat2 ?lon1 ?lon2))
-    ))
+;     (test (neq ?resort1 ?resort2));non calcolo la distanza sullo stesso resort (ovviamente)
+;     =>
+;     (printout t ?resort1 ?lat1 ?resort2 ?lat2 crlf)
+;     (assert (link  
+;         (resort1 ?resort1)
+;         (resort2 ?resort2)
+;         (distance (km-distance ?lat1 ?lat2 ?lon1 ?lon2))
+;     ))
 
-)
+; )
 
 ; (defrule TRIP::bho
 ;     ; (travel-banchmark (name travel-budget) (value ?budget))
