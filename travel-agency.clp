@@ -79,6 +79,17 @@
     ?d
 )
 
+(deffunction MAIN::get-price-per-night (?star ?people-number)
+    (bind ?price (+ 50 (* 25 (- ?star 1))))
+
+    (bind ?required-room (+ (div ?people-number 2) (mod ?people-number 2)))
+
+
+    (bind ?full-price (* ?price ?required-room))
+
+    ?full-price
+)
+
 
 
 ;;;** TEMPLATE MODULO MAIN **
@@ -191,7 +202,7 @@
     (travel-banchmark (name people-number) (value ?people-number) (certainty ?c4))
 
     (test (>= ?resort-star ?min-resort-star))
-    (test (>= (* ?rooms-number 2) ?people-number));Escludo i resort che non hanno abbastanza stanze
+    (test (> (* ?rooms-number 2) ?people-number));Escludo i resort che non hanno abbastanza stanze
     =>
     ;se il place è in una regione non scelta facciamo un downgrade
     (if (and (neq ?fav-region ?region) (neq ?fav-region unknown))
@@ -235,6 +246,10 @@
     (place (name cuneo) (region piemonte) (coordinates 44.384476 7.542671) (ID 4))
     (tourism-type (place-ID 4) (type balneare) (score 1))
     (tourism-type (place-ID 4) (type montano) (score 4))
+
+    (place (name milano) (region piemonte) (coordinates 45.4667971 9.1904984) (ID 5))
+    (tourism-type (place-ID 5) (type balneare) (score 1))
+    (tourism-type (place-ID 5) (type montano) (score 4))
 )
 
 (deffacts LOCATION::resort-list
@@ -250,13 +265,16 @@
 
     (resort (name resort-3a) (star 3) (rooms-number 3) (place-ID 3))
     (resort (name resort-3b) (star 2) (rooms-number 6) (place-ID 3))
-    (resort (name resort-3a) (star 3) (rooms-number 2) (place-ID 3))
-    (resort (name resort-3b) (star 3) (rooms-number 3) (place-ID 3))
+    (resort (name resort-3c) (star 3) (rooms-number 2) (place-ID 3))
+    (resort (name resort-3d) (star 3) (rooms-number 3) (place-ID 3))
 
     (resort (name resort-4a) (star 3) (rooms-number 4) (place-ID 4))
     (resort (name resort-4b) (star 3) (rooms-number 7) (place-ID 4))
-    (resort (name resort-4a) (star 2) (rooms-number 6) (place-ID 4))
-    (resort (name resort-4b) (star 4) (rooms-number 3) (place-ID 4))
+    (resort (name resort-4c) (star 2) (rooms-number 6) (place-ID 4))
+    (resort (name resort-4d) (star 4) (rooms-number 3) (place-ID 4))
+
+    (resort (name resort-5a) (star 3) (rooms-number 4) (place-ID 5))
+    (resort (name resort-5b) (star 3) (rooms-number 7) (place-ID 5))
 )
 
 ;;****************
@@ -279,29 +297,50 @@
    (multislot resort-sequence)
    (multislot place-sequence)
    (multislot certainties)
+   (multislot days-distribution)
+   (multislot price-per-night)
 )
 
+;qui ci potrebbe stare il controllo ?duration >= ?number-of-place 
 (defrule first-in-permutation
     ; (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ~0)
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
+   (travel-banchmark (name number-of-place) (value ?number-of-place))
+   (travel-banchmark (name people-number) (value ?people-number))
 
-   (resort (name ?resort-name) (place-ID ?ID))
+   (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
    (place (name ?city) (ID ?ID))
    =>
-   (assert (trip (resort-sequence ?resort-name) (place-sequence ?city) (certainties ?c)))
+   ;Imposto che vada fatto almeno un giorno in ogni meta (in base al numero di mete richieste)  
+   (bind ?array (create$))
+   (loop-for-count ?number-of-place do (bind ?array (insert$ ?array 1 1)))
+
+   (assert (trip 
+    (resort-sequence ?resort-name)
+    (place-sequence ?city)
+    (certainties ?c)
+    (days-distribution ?array)
+    (price-per-night (get-price-per-night ?star-number ?people-number))
+    ))
 )
 
 (defrule next-in-permutation
     (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ?k)
-   ?p <- (trip (resort-sequence $?resorts) (place-sequence $?cities) (certainties $?certainties))
+   ?p <- (trip
+    (resort-sequence $?resorts)
+    (place-sequence $?cities)
+    (certainties $?certainties)
+    (days-distribution $?d)
+    (price-per-night $?prices))
 
    ; (test (< (length$ ?resorts) ?k))
    (test (< (length$ ?cities) ?k))
 
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
-   (resort (name ?resort-name) (place-ID ?ID))
+   (travel-banchmark (name people-number) (value ?people-number))
+   (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
    (place (name ?city) (ID ?ID))
 
    ; (test (not (member$ ?resort-name ?resorts)))
@@ -311,8 +350,9 @@
     (resort-sequence ?resorts ?resort-name)
     (place-sequence ?cities ?city)
     (certainties ?certainties ?c)
-    )
-   )
+    (days-distribution ?d)
+    (price-per-night ?prices (get-price-per-night ?star-number ?people-number))
+    ))
 )
 
 (defrule cleanup
@@ -323,6 +363,60 @@
    (test (< (length$ ?cities) ?k))
    =>
    (retract ?p)
+)
+
+(defrule test
+    (declare (salience -10))
+    (travel-banchmark (name number-of-place) (value ?k))
+    (travel-banchmark (name travel-duration) (value ?duration))
+    (travel-banchmark (name travel-budget) (value ?budget))
+
+    ?p <- (trip
+    (resort-sequence $?resorts)
+    (place-sequence $?cities)
+    (certainties $?certainties)
+    (days-distribution $?days-distribution)
+    (price-per-night $?prices))
+
+    (test (= (length$ ?cities) ?k))
+    (test (< (+ 0 (expand$ ?days-distribution)) ?duration))
+
+    =>
+
+    (retract ?p)
+
+    (loop-for-count (?cnt1 1 (length$ ?days-distribution)) do
+
+        (bind ?new-prices (replace$ ?prices ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?prices) 2)))
+        (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (nth$ ?cnt1 ?days-distribution) 1))) ;replace all'intero di ?day-distribution tra gli indici che vanno da ?cnt1 a ?cnt1 (un solo elemento) con il numero che c'era +1
+
+        ;Se la nuova distribuzione dei giorni supera il budget non creo il nuovo trip
+        (if (<= (+ (expand$ ?new-prices)) ?budget) then (assert (trip 
+            (resort-sequence ?resorts)
+            (place-sequence ?cities)
+            (certainties ?certainties)
+            (days-distribution ?new-days-distribution)
+            (price-per-night ?new-prices))
+        ))
+
+    )
+
+)
+
+; cancello i trip che superano il budget
+(defrule cleanup-two
+    (declare (salience -15))
+    
+    ?p <- (trip 
+        (price-per-night $?prices))
+
+    (travel-banchmark (name travel-budget) (value ?budget))
+
+    (test (> (+ 0 (expand$ ?prices)) ?budget));lo 0 serve per evitare errori nel caso in cui ?prices sia vuoto
+
+    =>
+
+    (retract ?p)
 )
 
 
