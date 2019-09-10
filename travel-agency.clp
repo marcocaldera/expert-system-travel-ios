@@ -108,8 +108,19 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus QUESTIONS RULES LOCATION TRIP);Indico l'ordine dello stack focus
-;    (printout t "È un buon inizio")
+    (focus RULES LOCATION TRIP TRIP2);Indico l'ordine dello stack focus
+    ; (focus QUESTIONS RULES LOCATION TRIP TRIP2);Indico l'ordine dello stack focus
+)
+
+(deffacts MAIN::test-fact
+    (travel-banchmark (name travel-duration) (value 5) (certainty 1.0))
+    (travel-banchmark (name travel-budget) (value 9000) (certainty 1.0))
+    (travel-banchmark (name people-number) (value 3) (certainty 1.0))
+    (travel-banchmark (name min-resort-star) (value 3) (certainty 1.0))
+    (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
+    (travel-banchmark (name trip-type) (value culturale) (certainty 1.0))
+    (travel-banchmark (name personal-trait) (value avventura) (certainty 1.0))
+    (travel-banchmark (name favourite-region) (value piemonte) (certainty 1.0))
 )
 
 
@@ -130,18 +141,6 @@
         )
     )
 )
-
-; (deffacts MAIN::test-fact
-;     (travel-banchmark (name tourism-type) (value balneare) (certainty 0.7))
-;     (travel-banchmark (name tourism-type) (value montano) (certainty 0.4))
-;     (travel-banchmark (name tourism-type) (value sportivo) (certainty 0.8))
-;     (travel-banchmark (name tourism-type) (value enogastronomico) (certainty 0.2))
-;     ; (travel-banchmark (name min-resort-star) (value 3) (certainty 0.7))
-;     ; (travel-banchmark (name travel-region) (value piemonte) (certainty 0.7))
-;     ; (travel-banchmark (name travel-region) (value toscana) (certainty 0.4))
-;     ; (travel-banchmark (name travel-region) (value liguria) (certainty 0.6))
-;     ; (travel-banchmark (name travel-region) (value puglia) (certainty 0.1))
-; )
 
 
 ;;****************
@@ -282,17 +281,17 @@
 ;;
 ;; Modulo per gestire i viaggi
 ;;****************
-(defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL))
+(defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL) (export ?ALL))
 
 ; (deftemplate TRIP::trip
 ;     (multislot resort-sequence)
 ; )
 
-(deftemplate TRIP::link
-    (slot resort1)
-    (slot resort2)
-    (slot distance)
-)
+; (deftemplate TRIP::link
+;     (slot resort1)
+;     (slot resort2)
+;     (slot distance)
+; )
 (deftemplate TRIP::trip
    (multislot resort-sequence)
    (multislot place-sequence)
@@ -302,7 +301,7 @@
 )
 
 ;qui ci potrebbe stare il controllo ?duration >= ?number-of-place 
-(defrule first-in-permutation
+(defrule TRIP::first-in-permutation
     ; (travel-banchmark (name number-of-place) (value ?k))
    ; (k-combination ~0)
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
@@ -325,8 +324,15 @@
     ))
 )
 
-(defrule next-in-permutation
+(defrule TRIP::next-in-permutation
     (travel-banchmark (name number-of-place) (value ?k))
+    (travel-banchmark (name people-number) (value ?people-number))
+
+    ;recupero insieme le informazioni su un resort (con il luogo in cui è situato - city- e le info sul numero di stelle)
+    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
+    (place (name ?city) (ID ?ID))
+    (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
+
    ; (k-combination ?k)
    ?p <- (trip
     (resort-sequence $?resorts)
@@ -335,16 +341,8 @@
     (days-distribution $?d)
     (price-per-night $?prices))
 
-   ; (test (< (length$ ?resorts) ?k))
-   (test (< (length$ ?cities) ?k))
-
-   (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
-   (travel-banchmark (name people-number) (value ?people-number))
-   (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
-   (place (name ?city) (ID ?ID))
-
-   ; (test (not (member$ ?resort-name ?resorts)))
-   (test (not (member$ ?city ?cities)))
+   (test (< (length$ ?cities) ?k));il numero di città da visitare deve essere inferiore al vincolo sul numero di mete
+   (test (not (member$ ?city ?cities)));la città non deve essere già presente (non visito due volte la stessa città in un viaggio)
    =>
    (assert (trip 
     (resort-sequence ?resorts ?resort-name)
@@ -355,18 +353,18 @@
     ))
 )
 
-(defrule cleanup
+(defrule TRIP::cleanup
    (declare (salience -5))
    (travel-banchmark (name number-of-place) (value ?k))
-   ; (k-combination ?k)
    ?p <- (trip (resort-sequence $?cities))
    (test (< (length$ ?cities) ?k))
    =>
    (retract ?p)
 )
 
-(defrule test
-    (declare (salience -10))
+(defmodule TRIP2 (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
+
+(defrule TRIP2::distribute-days
     (travel-banchmark (name number-of-place) (value ?k))
     (travel-banchmark (name travel-duration) (value ?duration))
     (travel-banchmark (name travel-budget) (value ?budget))
@@ -391,22 +389,20 @@
         (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (nth$ ?cnt1 ?days-distribution) 1))) ;replace all'intero di ?day-distribution tra gli indici che vanno da ?cnt1 a ?cnt1 (un solo elemento) con il numero che c'era +1
 
         ;Se la nuova distribuzione dei giorni supera il budget non creo il nuovo trip
-        (if (<= (+ (expand$ ?new-prices)) ?budget) then (assert (trip 
+        (assert (trip 
             (resort-sequence ?resorts)
             (place-sequence ?cities)
             (certainties ?certainties)
             (days-distribution ?new-days-distribution)
             (price-per-night ?new-prices))
-        ))
+        )
 
     )
 
 )
 
 ; cancello i trip che superano il budget
-(defrule cleanup-two
-    (declare (salience -15))
-    
+(defrule TRIP2::cleanup-budget
     ?p <- (trip 
         (price-per-night $?prices))
 
@@ -419,57 +415,25 @@
     (retract ?p)
 )
 
+(defrule TRIP2::clean
+    (travel-banchmark (name travel-duration) (value ?duration))
 
-; (defrule TRIP::good-link
-;     (travel-banchmark (name location) (value ?resort1))
-;     (travel-banchmark (name location) (value ?resort2))
+    ?p <- (trip
+    (resort-sequence $?resorts)
+    (place-sequence $?cities)
+    (days-distribution $?days-distribution))
 
-;     (resort (name ?resort1) (place-ID ?id1))
-;     (resort (name ?resort2) (place-ID ?id2))
+    ?p2 <- (trip
+    (resort-sequence $?resorts)
+    (place-sequence $?cities)
+    (days-distribution $?days-distribution))
 
-;     (place (ID ?id1) (coordinates ?lat1 ?lon1))
-;     (place (ID ?id1) (coordinates ?lat2 ?lon2))
+    (test (neq ?p ?p2))
+    (test (= (+ 0 (expand$ ?days-distribution)) ?duration))
+    =>
 
-;     (test (neq ?resort1 ?resort2));non calcolo la distanza sullo stesso resort (ovviamente)
-;     =>
-;     (printout t ?resort1 ?lat1 ?resort2 ?lat2 crlf)
-;     (assert (link  
-;         (resort1 ?resort1)
-;         (resort2 ?resort2)
-;         (distance (km-distance ?lat1 ?lat2 ?lon1 ?lon2))
-;     ))
-
-; )
-
-; (defrule TRIP::bho
-;     ; (travel-banchmark (name travel-budget) (value ?budget))
-;     ; (travel-banchmark (name travel-duration) (value ?duration))
-;     ; (travel-banchmark (name people-number) (value ?people-number))
-
-;     =>
-;     (bind ?all-location (find-all-facts ((?f travel-banchmark)) (eq ?f:name location)))
-;     ; (do-for-all-facts ((?f travel-banchmark)) (eq ?f:name location) (printout t ?f:value crlf))
-
-;     ; (bind ?length (length ?all-location))
-;     ; (printout t (length ?all-location) crlf)
-;     ; (printout t (nth ?length ?all-location) crlf)
-
-;     (foreach ?loc ?all-location
-;       (assert (trip (resort-sequence ?loc)))
-;     )
-
-;     ; (loop-for-count (?all-location 1 ?length) do
-;     ;     (assert (trip (resort-sequence )))
-;     ;     ; (loop-for-count (?cnt2 1 3) do
-;     ;     ;     (printout t ?cnt1 " " ?cnt2 crlf)
-;     ;     ; )
-;     ; )
-
-
-;     ; (do-for-all-facts ((?f student)) TRUE
-;     ;   (printout t ?f:name crlf)))
-    
-; )
+    (retract ?p)
+)
 
 ;;****************
 ;;* MODULO QUESTIONS *
