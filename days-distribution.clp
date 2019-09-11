@@ -37,7 +37,6 @@
 
 )
 
-;prodotto cartesiano, ci mette un'infinità
 (defrule clean
     (declare (salience -5))
 
@@ -60,8 +59,6 @@
 
 ; PER TESTARE
 ; (length$ (find-all-facts ((?f trip)) TRUE))
-
-;questa versione è quella lenta
 
 
 
