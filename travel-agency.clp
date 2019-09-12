@@ -114,7 +114,7 @@
 
 (deffacts MAIN::test-fact
     (travel-banchmark (name travel-duration) (value 5) (certainty 1.0))
-    (travel-banchmark (name travel-budget) (value 9000) (certainty 1.0))
+    (travel-banchmark (name travel-budget) (value 1000) (certainty 1.0))
     (travel-banchmark (name people-number) (value 3) (certainty 1.0))
     (travel-banchmark (name min-resort-star) (value 3) (certainty 1.0))
     (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
@@ -201,7 +201,8 @@
     (travel-banchmark (name people-number) (value ?people-number) (certainty ?c4))
 
     (test (>= ?resort-star ?min-resort-star))
-    (test (> (* ?rooms-number 2) ?people-number));Escludo i resort che non hanno abbastanza stanze
+    ;il numero di stanze richieste per il gruppo di persone deve essere <= alle stanze che un resort può ospitare
+    (test (>= (* ?rooms-number 2) ?people-number));Escludo i resort che non hanno abbastanza stanze
     =>
     ;se il place è in una regione non scelta facciamo un downgrade
     (if (and (neq ?fav-region ?region) (neq ?fav-region unknown))
@@ -310,6 +311,7 @@
 
    (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
    (place (name ?city) (ID ?ID))
+   
    =>
    ;Imposto che vada fatto almeno un giorno in ogni meta (in base al numero di mete richieste)  
    ; (bind ?array (create$))
@@ -333,7 +335,6 @@
     (place (name ?city) (ID ?ID))
     (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
 
-   ; (k-combination ?k)
    ?p <- (trip
     (resort-sequence $?resorts)
     (place-sequence $?cities)
@@ -365,74 +366,49 @@
 
 (defmodule TRIP2 (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
 
-(deffunction TRIP2::create-distributions (?cc ?p ?days ?duration $?distribution)
+(deffunction TRIP2::create-distributions (?cc ?p ?days ?duration ?budget $?distribution)
    (bind ?max-alloc (- ?duration ?days (- ?cc 1)))   
    (if (= ?cc 1)
       then
-      (duplicate ?p (days-distribution ?distribution ?max-alloc))
+
+      (bind ?price-per-night (fact-slot-value ?p price-per-night))
+      (bind ?days-distribution (create$ ?distribution ?max-alloc))
+
+      (loop-for-count (?cnt1 1 (length$ ?days-distribution))
+        ;rimpiazzo il valore che c'è all'indice ?cnt1 dentro price-per-night con il suo valore moltiplicato per il numero che c'è all'indice ?cnt1 all'interno di ?days-distribution
+        (bind ?price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?price-per-night) (nth$ ?cnt1 ?days-distribution))))
+        )
+
+        ;if che verifica se viene superato il budget
+      (if (<= (+ (expand$ ?price-per-night)) ?budget) then
+        ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
+        (duplicate ?p (price-per-night ?price-per-night) (days-distribution ?days-distribution))
+        )
+      
       (return))
    (loop-for-count (?a ?max-alloc)
-      (create-distributions (- ?cc 1) ?p (+ ?days ?a) ?duration ?distribution ?a)))
+      (create-distributions (- ?cc 1) ?p (+ ?days ?a) ?duration ?budget ?distribution ?a)))
  
 (defrule TRIP2::test
     (travel-banchmark (name travel-duration) (value ?duration))
+    (travel-banchmark (name travel-budget) (value ?budget))
     ?p <- (trip (place-sequence $?cities) (days-distribution))
     =>
     (bind ?city-count (length$ ?cities))
-    (create-distributions ?city-count ?p 0 ?duration)
+    (create-distributions ?city-count ?p 0 ?duration ?budget)
     (retract ?p))
 
-; (defrule TRIP2::distribute-days
-;     (travel-banchmark (name number-of-place) (value ?k))
-;     (travel-banchmark (name travel-duration) (value ?duration))
+;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions (al momento è molto più lento usando la regola)
+; (defrule TRIP2::budget-exceeded
+;     (declare (salience -5))
 ;     (travel-banchmark (name travel-budget) (value ?budget))
-
-;     ?p <- (trip
-;     (resort-sequence $?resorts)
-;     (place-sequence $?cities)
-;     (certainties $?certainties)
-;     (days-distribution $?days-distribution)
-;     (price-per-night $?prices))
-
-;     (test (= (length$ ?cities) ?k))
-;     (test (< (+ 0 (expand$ ?days-distribution)) ?duration))
-
+;     ?p <- (trip (price-per-night $?price-per-night))
+;     (test (> (+ 0 (expand$ ?price-per-night)) ?budget))
 ;     =>
-
-;     (retract ?p)
-
-;     (loop-for-count (?cnt1 1 (length$ ?days-distribution)) do
-
-;         (bind ?new-prices (replace$ ?prices ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?prices) 2)))
-;         (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (nth$ ?cnt1 ?days-distribution) 1))) ;replace all'intero di ?day-distribution tra gli indici che vanno da ?cnt1 a ?cnt1 (un solo elemento) con il numero che c'era +1
-
-;         ;Se la nuova distribuzione dei giorni supera il budget non creo il nuovo trip
-;         (assert (trip 
-;             (resort-sequence ?resorts)
-;             (place-sequence ?cities)
-;             (certainties ?certainties)
-;             (days-distribution ?new-days-distribution)
-;             (price-per-night ?new-prices))
-;         )
-
-;     )
-
-; )
-
-; ; cancello i trip che superano il budget
-; (defrule TRIP2::cleanup-budget
-;     ?p <- (trip 
-;         (price-per-night $?prices))
-
-;     (travel-banchmark (name travel-budget) (value ?budget))
-
-;     (test (> (+ 0 (expand$ ?prices)) ?budget));lo 0 serve per evitare errori nel caso in cui ?prices sia vuoto
-
-;     =>
-
 ;     (retract ?p)
 ; )
 
+;REGOLA CHE ELIMINA I DUPLICATI quando usavo un metodo diverso per crare le combinazioni di giorni (usandola abbiamo esplosione combinatoria)
 ; (defrule TRIP2::clean
 ;     (travel-banchmark (name travel-duration) (value ?duration))
 
