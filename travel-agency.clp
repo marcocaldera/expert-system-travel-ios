@@ -108,7 +108,7 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus RULES LOCATION TRIP TRIP2);Indico l'ordine dello stack focus
+    (focus RULES LOCATION TRIP TRIP2 BUILDSOLUTION);Indico l'ordine dello stack focus
     ; (focus QUESTIONS RULES LOCATION TRIP TRIP2);Indico l'ordine dello stack focus
 )
 
@@ -123,6 +123,15 @@
     (travel-banchmark (name favourite-region) (value piemonte) (certainty 1.0))
 )
 
+(deffunction MAIN::new-certainty (?c1 ?c2)
+    (if (and (>= ?c1 0) (>= ?c2 0))
+    then (return (- (+ ?c1 ?c2) (* ?c1 ?c2)));(c1+c2)-(c1*c2)
+    else (if (and (< ?c1 0) (< ?c2 0)) 
+        then (return (+ (+ ?c1 ?c2) (* ?c1 ?c2)));(c1+c2)+(c1*c2)
+         else (return (/ (+ ?c1 ?c2) (- 1 (min (abs ?c1) (abs ?c2)))));(c1+c2)/(1-min(|c1|,|c2|))
+        )
+    )
+)
 
 ;Combina insieme i cf dei travel-banchmark che hanno stesso nome e value
 (defrule MAIN::combine-certainties
@@ -132,15 +141,11 @@
   (test (neq ?rem1 ?rem2));neq = not EQuals to
   =>
   (retract ?rem1);cancella rem1
-  
-  (if (and (>= ?c1 0) (>= ?c2 0))
-    then (modify ?rem2 (certainty (- (+ ?c1 ?c2) (* ?c1 ?c2))));(c1+c2)-(c1*c2)
-    else (if (and (< ?c1 0) (< ?c2 0)) 
-        then (modify ?rem2 (certainty (+ (+ ?c1 ?c2) (* ?c1 ?c2))));(c1+c2)+(c1*c2)
-         else (modify ?rem2 (certainty (/ (+ ?c1 ?c2) (- 1 (min (abs ?c1) (abs ?c2))))));(c1+c2)/(1-min(|c1|,|c2|))
-        )
-    )
+  (modify ?rem2 (certainty (new-certainty ?c1 ?c2)))
 )
+
+
+
 
 
 ;;****************
@@ -299,6 +304,7 @@
    (multislot certainties)
    (multislot days-distribution)
    (multislot price-per-night)
+   (slot build (default FALSE));serve in build solution 
 )
 
 ;qui ci potrebbe stare il controllo ?duration >= ?number-of-place 
@@ -397,6 +403,32 @@
     (bind ?city-count (length$ ?cities))
     (create-distributions ?city-count ?p 0 ?duration ?budget)
     (retract ?p))
+
+(defmodule BUILDSOLUTION (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
+
+(defrule BUILDSOLUTION::build-solution
+    ?p <- (trip (certainties $?certainties) (days-distribution $?days-distribution) (build FALSE))
+    =>
+    ;?certainties deve contenere la cf di ogni luogo n volte con n numero di giorni in cu si rimane nel luogo
+    (bind ?new-cf (create$))
+    (loop-for-count (?i 1 (length$ ?certainties))
+        (bind ?day (nth$ ?i ?days-distribution))
+        ;j parte da 2 perchè un giorno è già stato inserito nell'array certainties
+        (loop-for-count (?j 2 ?day) (bind ?new-cf (create$ ?new-cf (nth$ ?i ?certainties))))
+    )
+    ;aggiungo le ?new-cf in ?certainties
+    (bind ?certainties (insert$ ?certainties 1 ?new-cf))
+
+    ;calcolo la cf del trip
+    (bind ?trip-cf (nth$ 1 ?certainties))
+    ;parto da 2 xk in ?trip-cf ho già messo la prima certainty
+    (loop-for-count (?i 2 (length$ ?certainties))
+        (bind ?trip-cf (new-certainty ?trip-cf (nth$ ?i ?certainties)))
+    )
+    ; (printout t ?trip-cf crlf)
+    (modify ?p (certainties ?trip-cf) (build TRUE))
+
+)
 
 ;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions (al momento è molto più lento usando la regola)
 ; (defrule TRIP2::budget-exceeded
