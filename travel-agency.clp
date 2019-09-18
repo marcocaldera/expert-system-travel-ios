@@ -47,7 +47,7 @@
     ?answer
 )
 
-(deffunction MAIN::km-distance (?lat1 ?lat2 ?lon1 ?lon2)
+(deffunction MAIN::km-distance (?lat1 ?lon1 ?lat2 ?lon2)
 
     (bind ?r 6371)
     (bind ?lat (deg-rad (- ?lat2 ?lat1)))
@@ -108,8 +108,8 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus RULES LOCATION TRIP TRIP2 BUILDSOLUTION);Indico l'ordine dello stack focus
-    ; (focus QUESTIONS RULES LOCATION TRIP TRIP2);Indico l'ordine dello stack focus
+    (focus RULES LOCATION TRIP TRIP2 BUILDSOLUTION PRINTRESULT);Indico l'ordine dello stack focus
+    ; (focus QUESTIONS RULES LOCATION TRIP TRIP2 BUILDSOLUTION);Indico l'ordine dello stack focus
 )
 
 (deffacts MAIN::test-fact
@@ -200,10 +200,10 @@
         (place-ID ?id)
         (rooms-number ?rooms-number)
     )
-    (travel-banchmark (name min-resort-star) (value ?min-resort-star&~unknown) (certainty ?c1))
-    (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c2))
-    (travel-banchmark (name favourite-region) (value ?fav-region) (certainty ?c3))
-    (travel-banchmark (name people-number) (value ?people-number) (certainty ?c4))
+    (travel-banchmark (name min-resort-star) (value ?min-resort-star&~unknown))
+    (travel-banchmark (name tourism-type) (value ?tourism-type) (certainty ?c1))
+    (travel-banchmark (name favourite-region) (value ?fav-region))
+    (travel-banchmark (name people-number) (value ?people-number))
 
     (test (>= ?resort-star ?min-resort-star))
     ;il numero di stanze richieste per il gruppo di persone deve essere <= alle stanze che un resort può ospitare
@@ -224,7 +224,7 @@
         (travel-banchmark
             (name location);creiamo un banchmark di tipo location
             (value ?resort-name)
-            (certainty (min ?c1 ?c2 ?c3 ?c4 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
+            (certainty (min ?c1 (/ ?score 5)));score/5 mi da il grado di certainty con cui il place appartiene ad un tourism-type
         )
     )
 
@@ -236,50 +236,103 @@
 (deffacts LOCATION::place-list
     (place (name rapallo) (region liguria) (coordinates 44.352200 9.230800) (ID 1))
     (tourism-type (place-ID 1) (type balneare) (score 5))
-    (tourism-type (place-ID 1) (type montano) (score 3))
+    (tourism-type (place-ID 1) (type montano) (score 2))
+    (tourism-type (place-ID 1) (type lacustre) (score 0))
+    (tourism-type (place-ID 1) (type naturalistico) (score 3))
+    (tourism-type (place-ID 1) (type termale) (score 3))
+    (tourism-type (place-ID 1) (type culturale) (score 1))
+    (tourism-type (place-ID 1) (type religioso) (score 0))
+    (tourism-type (place-ID 1) (type sportivo) (score 2))
+    (tourism-type (place-ID 1) (type enogastronomico) (score 4))
     
     (place (name diano) (region liguria) (coordinates 43.909890 8.081830) (ID 2))
     (tourism-type (place-ID 2) (type balneare) (score 5))
-    (tourism-type (place-ID 2) (type montano) (score 2))
-    (tourism-type (place-ID 2) (type sportivo) (score 4))
-    (tourism-type (place-ID 2) (type enogastronomico) (score 2))
+    (tourism-type (place-ID 2) (type montano) (score 3))
+    (tourism-type (place-ID 2) (type lacustre) (score 0))
+    (tourism-type (place-ID 2) (type naturalistico) (score 3))
+    (tourism-type (place-ID 2) (type termale) (score 3))
+    (tourism-type (place-ID 2) (type culturale) (score 1))
+    (tourism-type (place-ID 2) (type religioso) (score 0))
+    (tourism-type (place-ID 2) (type sportivo) (score 3))
+    (tourism-type (place-ID 2) (type enogastronomico) (score 4))
 
     (place (name alassio) (region liguria) (coordinates 44.014336 8.181174) (ID 3))
     (tourism-type (place-ID 3) (type balneare) (score 5))
-    (tourism-type (place-ID 3) (type montano) (score 2))
+    (tourism-type (place-ID 3) (type montano) (score 3))
+    (tourism-type (place-ID 3) (type lacustre) (score 0))
+    (tourism-type (place-ID 3) (type naturalistico) (score 3))
+    (tourism-type (place-ID 3) (type termale) (score 3))
+    (tourism-type (place-ID 3) (type culturale) (score 1))
+    (tourism-type (place-ID 3) (type religioso) (score 0))
+    (tourism-type (place-ID 3) (type sportivo) (score 3))
+    (tourism-type (place-ID 3) (type enogastronomico) (score 4))
 
     (place (name cuneo) (region piemonte) (coordinates 44.384476 7.542671) (ID 4))
-    (tourism-type (place-ID 4) (type balneare) (score 1))
+    (tourism-type (place-ID 4) (type balneare) (score 0))
     (tourism-type (place-ID 4) (type montano) (score 4))
+    (tourism-type (place-ID 4) (type lacustre) (score 3))
+    (tourism-type (place-ID 4) (type naturalistico) (score 4))
+    (tourism-type (place-ID 4) (type termale) (score 2))
+    (tourism-type (place-ID 4) (type culturale) (score 1))
+    (tourism-type (place-ID 4) (type religioso) (score 2))
+    (tourism-type (place-ID 4) (type sportivo) (score 3))
+    (tourism-type (place-ID 4) (type enogastronomico) (score 4))
 
-    (place (name milano) (region piemonte) (coordinates 45.4667971 9.1904984) (ID 5))
-    (tourism-type (place-ID 5) (type balneare) (score 1))
-    (tourism-type (place-ID 5) (type montano) (score 4))
+    (place (name milano) (region lombardia) (coordinates 45.4667971 9.1904984) (ID 5))
+    (tourism-type (place-ID 5) (type balneare) (score 0))
+    (tourism-type (place-ID 5) (type montano) (score 0))
+    (tourism-type (place-ID 5) (type lacustre) (score 2))
+    (tourism-type (place-ID 5) (type naturalistico) (score 2))
+    (tourism-type (place-ID 5) (type termale) (score 3))
+    (tourism-type (place-ID 5) (type culturale) (score 3))
+    (tourism-type (place-ID 5) (type religioso) (score 3))
+    (tourism-type (place-ID 5) (type sportivo) (score 5))
+    (tourism-type (place-ID 5) (type enogastronomico) (score 4))
+
+    (place (name torino) (region piemonte) (coordinates 45.0677551 7.6824892) (ID 6))
+    (tourism-type (place-ID 6) (type balneare) (score 0))
+    (tourism-type (place-ID 6) (type montano) (score 2))
+    (tourism-type (place-ID 6) (type lacustre) (score 2))
+    (tourism-type (place-ID 6) (type naturalistico) (score 2))
+    (tourism-type (place-ID 6) (type termale) (score 3))
+    (tourism-type (place-ID 6) (type culturale) (score 4))
+    (tourism-type (place-ID 6) (type religioso) (score 3))
+    (tourism-type (place-ID 6) (type sportivo) (score 4))
+    (tourism-type (place-ID 6) (type enogastronomico) (score 3))
+
+    (place (name asti) (region piemonte) (coordinates 44.900542 8.2068876) (ID 7))
+    (tourism-type (place-ID 7) (type balneare) (score 0))
+    (tourism-type (place-ID 7) (type montano) (score 1))
+    (tourism-type (place-ID 7) (type lacustre) (score 2))
+    (tourism-type (place-ID 7) (type naturalistico) (score 4))
+    (tourism-type (place-ID 7) (type termale) (score 2))
+    (tourism-type (place-ID 7) (type culturale) (score 4))
+    (tourism-type (place-ID 7) (type religioso) (score 4))
+    (tourism-type (place-ID 7) (type sportivo) (score 3))
+    (tourism-type (place-ID 7) (type enogastronomico) (score 4))
 )
 
 (deffacts LOCATION::resort-list
-    (resort (name resort-1a) (star 3) (rooms-number 9) (place-ID 1))
-    (resort (name resort-1b) (star 2) (rooms-number 4) (place-ID 1))
-    (resort (name resort-1c) (star 3) (rooms-number 6) (place-ID 1))
-    (resort (name resort-1d) (star 3) (rooms-number 3) (place-ID 1))
+    (resort (name rapallo-1a) (star 3) (rooms-number 9) (place-ID 1))
+    (resort (name rapallo-1b) (star 2) (rooms-number 4) (place-ID 1))
 
-    (resort (name resort-2a) (star 3) (rooms-number 8) (place-ID 2))
-    (resort (name resort-2b) (star 2) (rooms-number 2) (place-ID 2))
-    (resort (name resort-2c) (star 4) (rooms-number 5) (place-ID 2))
-    (resort (name resort-2d) (star 3) (rooms-number 3) (place-ID 2))
+    (resort (name diano-2a) (star 4) (rooms-number 8) (place-ID 2))
+    (resort (name diano-2b) (star 2) (rooms-number 2) (place-ID 2))
 
-    (resort (name resort-3a) (star 3) (rooms-number 3) (place-ID 3))
-    (resort (name resort-3b) (star 2) (rooms-number 6) (place-ID 3))
-    (resort (name resort-3c) (star 3) (rooms-number 2) (place-ID 3))
-    (resort (name resort-3d) (star 3) (rooms-number 3) (place-ID 3))
+    (resort (name alassio-3a) (star 3) (rooms-number 3) (place-ID 3))
+    (resort (name alassio-3b) (star 2) (rooms-number 6) (place-ID 3))
 
-    (resort (name resort-4a) (star 3) (rooms-number 4) (place-ID 4))
-    (resort (name resort-4b) (star 3) (rooms-number 7) (place-ID 4))
-    (resort (name resort-4c) (star 2) (rooms-number 6) (place-ID 4))
-    (resort (name resort-4d) (star 4) (rooms-number 3) (place-ID 4))
+    (resort (name cuneo-4a) (star 3) (rooms-number 4) (place-ID 4))
+    (resort (name cuneo-4b) (star 4) (rooms-number 7) (place-ID 4))
 
-    (resort (name resort-5a) (star 3) (rooms-number 4) (place-ID 5))
-    (resort (name resort-5b) (star 3) (rooms-number 7) (place-ID 5))
+    (resort (name milano-5a) (star 3) (rooms-number 4) (place-ID 5))
+    (resort (name milano-5b) (star 3) (rooms-number 7) (place-ID 5))
+
+    (resort (name torino-6a) (star 3) (rooms-number 4) (place-ID 6))
+    (resort (name torino-6b) (star 3) (rooms-number 7) (place-ID 6))
+
+    (resort (name asti-7a) (star 3) (rooms-number 4) (place-ID 7))
+    (resort (name asti-7b) (star 3) (rooms-number 7) (place-ID 7))
 )
 
 ;;****************
@@ -305,6 +358,7 @@
    (multislot days-distribution)
    (multislot price-per-night)
    (slot build (default FALSE));serve in build solution 
+   (slot penalty (default FALSE))
 )
 
 ;qui ci potrebbe stare il controllo ?duration >= ?number-of-place 
@@ -395,7 +449,7 @@
    (loop-for-count (?a ?max-alloc)
       (create-distributions (- ?cc 1) ?p (+ ?days ?a) ?duration ?budget ?distribution ?a)))
  
-(defrule TRIP2::test
+(defrule TRIP2::distribute-days
     (travel-banchmark (name travel-duration) (value ?duration))
     (travel-banchmark (name travel-budget) (value ?budget))
     ?p <- (trip (place-sequence $?cities) (days-distribution))
@@ -409,7 +463,7 @@
 (defrule BUILDSOLUTION::build-solution
     ?p <- (trip (certainties $?certainties) (days-distribution $?days-distribution) (build FALSE))
     =>
-    ;?certainties deve contenere la cf di ogni luogo n volte con n numero di giorni in cu si rimane nel luogo
+        ;?certainties deve contenere la cf di ogni luogo n volte con n numero di giorni in cu si rimane nel luogo
     (bind ?new-cf (create$))
     (loop-for-count (?i 1 (length$ ?certainties))
         (bind ?day (nth$ ?i ?days-distribution))
@@ -419,15 +473,47 @@
     ;aggiungo le ?new-cf in ?certainties
     (bind ?certainties (insert$ ?certainties 1 ?new-cf))
 
-    ;calcolo la cf del trip
-    (bind ?trip-cf (nth$ 1 ?certainties))
-    ;parto da 2 xk in ?trip-cf ho già messo la prima certainty
-    (loop-for-count (?i 2 (length$ ?certainties))
-        (bind ?trip-cf (new-certainty ?trip-cf (nth$ ?i ?certainties)))
-    )
-    ; (printout t ?trip-cf crlf)
-    (modify ?p (certainties ?trip-cf) (build TRUE))
+    ;calcolo la cf del trip (come media)
+    (bind ?trip-cf (/ (+ (expand$ ?certainties)) (length$ ?certainties)))
 
+    ;OLD
+    ; ;calcolo la cf del trip
+    ; (bind ?trip-cf (nth$ 1 ?certainties))
+    ; ;parto da 2 xk in ?trip-cf ho già messo la prima certainty
+    ; (loop-for-count (?i 2 (length$ ?certainties))
+    ;     (bind ?trip-cf (new-certainty ?trip-cf (nth$ ?i ?certainties)))
+    ; )
+
+    ; (printout t ?trip-cf crlf)
+
+    ;cancello quelli con cf < 0.2
+    (if (> ?trip-cf 0.2) then (modify ?p (certainties ?trip-cf) (build TRUE)) else (retract ?p))
+
+)
+
+(defrule BUILDSOLUTION::distance-penalty
+    ?p <- (trip (certainties ?certainty) (place-sequence $?place-sequence) (build TRUE) (penalty FALSE))
+    =>
+    ;?penalty mi serve per verificare che si stata assegnata una penalità e di conseguenza successivamente aggiornare il fatto ?p 
+    (bind ?penalty FALSE)
+    (loop-for-count (?i 1 (- (length$ ?place-sequence) 1))
+        ;recupero il fatto relativo a quel place
+        (bind ?temp-place-1 (nth$ 1 (find-fact ((?f place)) (eq ?f:name (nth$ ?i ?place-sequence)))));nth 1 serve per estrarre il primo elemento dall'array risultato. in py: [Fact-1] in clips: (Fact-1)
+        (bind ?temp-place-2 (nth$ 1 (find-fact ((?f place)) (eq ?f:name (nth$ (+ ?i 1) ?place-sequence)))))
+
+        (bind ?temp-coord-1 (fact-slot-value ?temp-place-1 coordinates))
+        (bind ?temp-coord-2 (fact-slot-value ?temp-place-2 coordinates))
+
+        (if (> (km-distance (expand$ ?temp-coord-1) (expand$ ?temp-coord-2)) 100) 
+            then
+            (bind ?penalty TRUE)
+            ;declasso la certainty di questo trip
+            (bind ?certainty (new-certainty ?certainty -0.2))
+            ; (printout t (km-distance (expand$ ?temp-coord-1) (expand$ ?temp-coord-2)) crlf)
+        )
+    )
+    ;cancello quelli con cf < di 0.2
+    (if (and (eq ?penalty TRUE) (> ?certainty 0.2)) then (modify ?p (certainties ?certainty) (penalty TRUE)) else (retract ?p))
 )
 
 ;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions (al momento è molto più lento usando la regola)
@@ -460,6 +546,20 @@
 
 ;     (retract ?p)
 ; )
+
+(defmodule PRINTRESULT (import MAIN ?ALL) (import TRIP ?ALL) (import BUILDSOLUTION ?ALL))
+
+; (defrule PRINTRESULT::testiamo
+;     ; ?p <- (trip (certainties ?certainty) (place-sequence $?place-sequence))
+;     ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
+;     (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
+;     (test (subsetp $?place-sequence1 $?place-sequence2))
+;   => 
+;   (retract ?trip)
+;   (printout t ?place-sequence1 crlf)
+;   ; (printout t ?resort-sequence crlf)
+;   (printout t ?certainty crlf)
+; ) 
 
 ;;****************
 ;;* MODULO QUESTIONS *
@@ -617,32 +717,33 @@
     )
     (rule
         (if trip-type is culturale)
-        (then tourism-type is culturale with certainty 1.0 and 
-            tourism-type is religioso with certainty 0.5 and 
-            tourism-type is enogastronomico with certainty 0.4 and
-            tourism-type is balneare with certainty -0.2)
+        (then tourism-type is culturale with certainty 0.4 and 
+            tourism-type is religioso with certainty 0.3 and 
+            tourism-type is enogastronomico with certainty 0.2 and
+            tourism-type is balneare with certainty 0.1)
     )
     (rule
         (if trip-type is rilassante)
-        (then tourism-type is balneare with certainty 0.8 and 
-            tourism-type is montano with certainty 0.8 and 
-            tourism-type is sportivo with certainty 0.2 and
-            tourism-type is termale with certainty 0.6 and
-            tourism-type is lacustre with certainty 0.6)
+        (then tourism-type is balneare with certainty 0.4 and 
+            tourism-type is montano with certainty 0.4 and 
+            tourism-type is sportivo with certainty 0.4 and
+            tourism-type is termale with certainty 0.3 and
+            tourism-type is lacustre with certainty 0.3)
     )
     (rule
         (if personal-trait is avventura)
-        (then tourism-type is naturalistico with certainty 0.8 and 
-            tourism-type is balneare with certainty -0.3 and 
+        (then tourism-type is naturalistico with certainty 0.4 and 
+            tourism-type is balneare with certainty 0.1 and 
             tourism-type is sportivo with certainty 0.2 and
-            tourism-type is termale with certainty 0.6)
+            tourism-type is termale with certainty 0.4 and
+            tourism-type is lacustre with certainty 0.3)
     )
     (rule
         (if personal-trait is comodità)
-        (then tourism-type is balneare with certainty 0.8 and 
-            tourism-type is montano with certainty 0.8 and 
-            tourism-type is enogastronomico with certainty 0.6 and
-            tourism-type is naturalistico with certainty -0.1)
+        (then tourism-type is balneare with certainty 0.5 and 
+            tourism-type is montano with certainty 0.5 and 
+            tourism-type is enogastronomico with certainty 0.5 and
+            tourism-type is naturalistico with certainty 0.1)
     )
 )
 
