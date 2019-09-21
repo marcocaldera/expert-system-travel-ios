@@ -1,0 +1,6 @@
+framework module CLIPSiOS {
+  umbrella header "CLIPSiOS.h"
+
+  export *
+  module * { export * }
+}

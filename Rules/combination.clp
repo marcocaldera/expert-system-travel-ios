@@ -11,6 +11,7 @@
    (travel-banchmark (name place) (value roma))
    (travel-banchmark (name place) (value milano))
    (travel-banchmark (name place) (value venezia))
+   (travel-banchmark (name place) (value polizia))
    (travel-banchmark (name place) (value napoli)))
 
 (defrule first-in-permutation
@@ -35,6 +36,3 @@
    (test (< (length$ ?cities) ?k))
    =>
    (retract ?p))
-
-; PER TESTARE
-; (length$ (find-all-facts ((?f permutation)) TRUE))

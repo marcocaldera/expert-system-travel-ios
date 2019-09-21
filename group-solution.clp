@@ -14,12 +14,14 @@
 (defrule all-lamps-are-on 
     ; ?p <- (trip (certainties ?certainty) (place-sequence $?place-sequence))
    ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
-   (and
-      (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
-      (test (subsetp $?place-sequence1 $?place-sequence2))
-   )
+   (not
+      (and (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
+      (test (subsetp $?place-sequence1 $?place-sequence2))))
   =>
-  (retract ?trip)
+
+   ; (bind ?facts (find-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence1) (neq (nth$ 1 ?f:certainties) ?certainty))))
+   (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence1) (neq (nth$ 1 ?f:certainties) ?certainty)) (retract ?f))
+  ; (retract ?trip)
   (printout t ?place-sequence1 crlf)
   (printout t ?certainty crlf)
 ) 

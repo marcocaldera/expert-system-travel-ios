@@ -549,17 +549,40 @@
 
 (defmodule PRINTRESULT (import MAIN ?ALL) (import TRIP ?ALL) (import BUILDSOLUTION ?ALL))
 
+;cancella tutti i ?trip della stessa place-sequence che hanno una un altro ?trip con cf + grande
 ; (defrule PRINTRESULT::testiamo
-;     ; ?p <- (trip (certainties ?certainty) (place-sequence $?place-sequence))
 ;     ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
 ;     (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
-;     (test (subsetp $?place-sequence1 $?place-sequence2))
+;     (test (subsetp $?place-sequence1 $?place-sequence2));serve per comparare anche se gli eleme sono in posizione diversa: milano venezia toirno = torino venezia milano
 ;   => 
 ;   (retract ?trip)
-;   (printout t ?place-sequence1 crlf)
-;   ; (printout t ?resort-sequence crlf)
-;   (printout t ?certainty crlf)
-; ) 
+;   ; (printout t ?place-sequence1 crlf)
+;   ; ; (printout t ?resort-sequence crlf)
+;   ; (printout t ?certainty crlf)
+; )
+
+;per ogni trip che non ha trip con cf più alte, elimino i trip della stessa place-sequence con cf minore
+(defrule PRINTRESULT::final
+   ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
+   (not
+      (and (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
+      (test (subsetp $?place-sequence1 $?place-sequence2))))
+  =>
+   (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence1) (neq (nth$ 1 ?f:certainties) ?certainty)) (retract ?f))
+  ; (printout t ?place-sequence1 crlf)
+  ; (printout t ?certainty crlf)
+)  
+
+; (defrule PRINTRESULT::final-test
+;     (declare (salience -5))
+;    ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence))
+;    ?same <- (trip (place-sequence $?place-sequence))
+;    (test (neq ?trip ?same))
+;   =>
+;    (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence) (neq ?trip ?f)) (retract ?f))
+;   ; (printout t ?place-sequence1 crlf)
+;   ; (printout t ?certainty crlf)
+; )  
 
 ;;****************
 ;;* MODULO QUESTIONS *
