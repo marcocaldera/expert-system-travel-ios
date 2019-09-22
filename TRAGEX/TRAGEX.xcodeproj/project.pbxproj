@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		32568DBC2337CFFB00E49446 /* TravelBanchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */; };
 		3270D39B2334ECC70004BEF9 /* Function.m in Sources */ = {isa = PBXBuildFile; fileRef = 3270D39A2334ECC70004BEF9 /* Function.m */; };
 		3287FFFD23367589008DBCEA /* TragexTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3287FFFC23367589008DBCEA /* TragexTableViewController.swift */; };
 		3287FFFF23367DA5008DBCEA /* OptionsDetailTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3287FFFE23367DA5008DBCEA /* OptionsDetailTableViewController.swift */; };
@@ -54,6 +55,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelBanchmark.swift; sourceTree = "<group>"; };
 		3270D3992334ECC70004BEF9 /* Function.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Function.h; sourceTree = "<group>"; };
 		3270D39A2334ECC70004BEF9 /* Function.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Function.m; sourceTree = "<group>"; };
 		3287FFFC23367589008DBCEA /* TragexTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TragexTableViewController.swift; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 				32A481292333F3FD00C9156C /* LaunchScreen.storyboard */,
 				32A4812C2333F3FD00C9156C /* Info.plist */,
 				3287FFFC23367589008DBCEA /* TragexTableViewController.swift */,
+				32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */,
 			);
 			path = TRAGEX;
 			sourceTree = "<group>";
@@ -309,6 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3287FFFD23367589008DBCEA /* TragexTableViewController.swift in Sources */,
+				32568DBC2337CFFB00E49446 /* TravelBanchmark.swift in Sources */,
 				3270D39B2334ECC70004BEF9 /* Function.m in Sources */,
 				32A481232333F3FB00C9156C /* ViewController.swift in Sources */,
 				32A481212333F3FB00C9156C /* AppDelegate.swift in Sources */,

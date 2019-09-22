@@ -9,6 +9,9 @@
 import UIKit
 
 class OptionsDetailTableViewController: UITableViewController {
+    
+    var criteriaList = [Criteria]()
+    weak var delegate: TragexTableViewController!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,23 +27,41 @@ class OptionsDetailTableViewController: UITableViewController {
 
     override func numberOfSections(in tableView: UITableView) -> Int {
         // #warning Incomplete implementation, return the number of sections
-        return 0
+        return 1
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return 0
+        return self.criteriaList.count
     }
 
-    /*
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "criteriaCell", for: indexPath)
 
-        // Configure the cell...
+        let criteria: Criteria = self.criteriaList[indexPath.row]
+        
+        cell.textLabel?.text = criteria.name
+        
+        if criteria.checked {
+            cell.accessoryType = UITableViewCell.AccessoryType.checkmark
+        }
 
         return cell
     }
-    */
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        for i in 0...self.criteriaList.count-1 {
+            if i == indexPath.row {
+                self.criteriaList[i].checked = true
+            } else { self.criteriaList[i].checked = false }
+        }
+        
+        delegate.optionsList[self.tableView.indexPathForSelectedRow!.row].options = self.criteriaList
+        //Torna alla view precedente
+        self.navigationController?.popViewController(animated: true)
+    }
 
     /*
     // Override to support conditional editing of the table view.

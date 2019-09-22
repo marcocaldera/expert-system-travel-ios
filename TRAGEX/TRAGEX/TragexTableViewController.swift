@@ -10,12 +10,16 @@ import UIKit
 
 class TragexTableViewController: UITableViewController {
     
-    var optionsList = [String]()
+    var optionsList = [TravelBanchmark]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.optionsList = ["Mela", "Pera", "Banana"]
+        self.optionsList = [
+            TravelBanchmark(name: "A", options:[Criteria(name: "1A",checked: false), Criteria(name: "2A",checked: true)]),
+            TravelBanchmark(name: "B", options:[Criteria(name: "1B",checked: true), Criteria(name: "2B",checked: false)]),
+            TravelBanchmark(name: "C", options:[Criteria(name: "1C",checked: false), Criteria(name: "2C",checked: true)])
+        ]
         
         // Invoca i metodi che ricaricano i dati
         self.tableView.reloadData()
@@ -25,6 +29,12 @@ class TragexTableViewController: UITableViewController {
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
+    }
+    
+    override func viewWillAppear(_ animated:Bool) {
+        super.viewWillAppear(animated)
+        print(self.optionsList)
+        tableView.reloadData()
     }
 
     // MARK: - Table view data source
@@ -43,7 +53,17 @@ class TragexTableViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "optionCell", for: indexPath)
         
-        cell.textLabel?.text = self.optionsList[indexPath.row]
+        let travelBanchmark = self.optionsList[indexPath.row]
+        
+        //Testo a sx
+        cell.textLabel?.text = travelBanchmark.name
+        
+        //Testo a dx (checked deve essere a true)
+        if let option = travelBanchmark.options.first(where: {$0.checked}) {
+            cell.detailTextLabel?.text = option.name
+        }
+        
+        //Freccia indicatrice
         cell.accessoryType = UITableViewCell.AccessoryType.disclosureIndicator
 
         return cell
@@ -89,14 +109,22 @@ class TragexTableViewController: UITableViewController {
     }
     */
 
-    /*
+    
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        
+        let optionsTableViewController = segue.destination as! OptionsDetailTableViewController
+        
+        let travelBanchmark = self.optionsList[self.tableView.indexPathForSelectedRow!.row]
+        
+        optionsTableViewController.delegate = self
+        optionsTableViewController.title = travelBanchmark.name
+        optionsTableViewController.criteriaList = travelBanchmark.options
         // Get the new view controller using segue.destination.
         // Pass the selected object to the new view controller.
     }
-    */
+    
 
 }
