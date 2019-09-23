@@ -516,7 +516,7 @@
     (if (and (eq ?penalty TRUE) (> ?certainty 0.2)) then (modify ?p (certainties ?certainty) (penalty TRUE)) else (retract ?p))
 )
 
-;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions (al momento è molto più lento usando la regola)
+;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions
 ; (defrule TRIP2::budget-exceeded
 ;     (declare (salience -5))
 ;     (travel-banchmark (name travel-budget) (value ?budget))
@@ -526,7 +526,7 @@
 ;     (retract ?p)
 ; )
 
-;REGOLA CHE ELIMINA I DUPLICATI quando usavo un metodo diverso per crare le combinazioni di giorni (usandola abbiamo esplosione combinatoria)
+;REGOLA CHE ELIMINA I DUPLICATI quando usavo un metodo diverso per crare le combinazioni di giorni
 ; (defrule TRIP2::clean
 ;     (travel-banchmark (name travel-duration) (value ?duration))
 
@@ -562,7 +562,8 @@
 ; )
 
 ;per ogni trip che non ha trip con cf più alte, elimino i trip della stessa place-sequence con cf minore
-(defrule PRINTRESULT::final
+(defrule PRINTRESULT::pick-best-trip
+    (declare (salience 10))
    ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
    (not
       (and (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
@@ -571,6 +572,23 @@
    (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence1) (neq (nth$ 1 ?f:certainties) ?certainty)) (retract ?f))
   ; (printout t ?place-sequence1 crlf)
   ; (printout t ?certainty crlf)
+)
+
+(defrule PRINTRESULT::random-choose-equal-trips "Scelta randomica di un trip tra quelli con stessa subsetp di place-sequence"
+    (declare (salience 5))
+    ?trip <- (trip (place-sequence $?place-sequence1))
+    =>
+    ;trovo tutti i fatti con la stessa place-sequence (subset)
+    (bind ?same-place-facts (find-all-facts ((?f trip)) (subsetp ?f:place-sequence ?place-sequence1)))
+
+    ;scelgo randomicamente un indice da salvare come scelta migliore
+    (bind ?choosen-index (+ (mod (random) (length$ ?same-place-facts)) 1))
+
+    ;elimino tutti i fatti tra quelli dell'indice
+    (loop-for-count (?i 1 (length$ ?same-place-facts))
+        (if (neq ?choosen-index ?i) then (retract (nth$ ?i ?same-place-facts)))
+    )
+
 )  
 
 ; (defrule PRINTRESULT::final-test

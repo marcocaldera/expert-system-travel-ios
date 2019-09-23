@@ -7,13 +7,21 @@
 //
 
 import UIKit
+import CLIPSiOS
 
 class TragexTableViewController: UITableViewController {
     
     var optionsList = [TravelBanchmark]()
+    let clipsEnv = CreateEnvironment()
+    let filePath = Bundle.main.path(forResource: "combination", ofType: "clp", inDirectory: "Rules")
+    
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        EnvLoad(clipsEnv,filePath);
+//        EnvWatch(clipsEnv,"activations");
+//        EnvWatch(clipsEnv,"facts");
         
         self.optionsList = [
             TravelBanchmark(name: "A", options:[Criteria(name: "1A",checked: false), Criteria(name: "2A",checked: true)]),
@@ -31,9 +39,28 @@ class TragexTableViewController: UITableViewController {
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
     
+    
+    @IBAction func start(_ sender: Any) {
+        print("cavolo")
+        EnvReset(clipsEnv);
+
+//        EnvAssertString(clipsEnv,"(permutation (values madonna)")
+        EnvRun(clipsEnv,-1);
+        
+        EnvFocus(clipsEnv, EnvFindDefmodule(clipsEnv, "TRIP"))
+        let expression = "(find-all-facts ((?f trip)) TRUE)";
+//        let expression = "(find-all-facts ((?f travel-banchmark)) TRUE)";
+        var outputValue: DATA_OBJECT = DATA_OBJECT.init();
+        EnvEval(clipsEnv, expression, &outputValue)
+        
+        Function.init().isUserModelValid(clipsEnv!, result: outputValue)
+        print("fino a qua")
+        
+    }
+    
     override func viewWillAppear(_ animated:Bool) {
         super.viewWillAppear(animated)
-        print(self.optionsList)
+//        print(self.optionsList)
         tableView.reloadData()
     }
 

@@ -75,6 +75,7 @@
 		32A481422333F3FD00C9156C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A481572333F91600C9156C /* CLIPSiOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CLIPSiOS.framework; sourceTree = "<group>"; };
 		32A481602333FB3D00C9156C /* Rules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Rules; path = ../../Rules; sourceTree = "<group>"; };
+		32E5C6562338E16D00A392D7 /* Tragex-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tragex-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +104,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3225CA2F2338C9A500CC9219 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		3225CA302338C9C300CC9219 /* TableView */ = {
+			isa = PBXGroup;
+			children = (
+				3287FFFE23367DA5008DBCEA /* OptionsDetailTableViewController.swift */,
+				3287FFFC23367589008DBCEA /* TragexTableViewController.swift */,
+			);
+			path = TableView;
+			sourceTree = "<group>";
+		};
 		3287000023367EFF008DBCEA /* ClipsWrapper */ = {
 			isa = PBXGroup;
 			children = (
@@ -137,17 +155,17 @@
 		32A4811F2333F3FB00C9156C /* TRAGEX */ = {
 			isa = PBXGroup;
 			children = (
+				32E5C6562338E16D00A392D7 /* Tragex-Bridging-Header.h */,
+				3225CA302338C9C300CC9219 /* TableView */,
+				3225CA2F2338C9A500CC9219 /* Model */,
 				3287000023367EFF008DBCEA /* ClipsWrapper */,
 				32A481602333FB3D00C9156C /* Rules */,
 				32A481202333F3FB00C9156C /* AppDelegate.swift */,
 				32A481222333F3FB00C9156C /* ViewController.swift */,
 				32A481242333F3FB00C9156C /* Main.storyboard */,
-				3287FFFE23367DA5008DBCEA /* OptionsDetailTableViewController.swift */,
 				32A481272333F3FD00C9156C /* Assets.xcassets */,
 				32A481292333F3FD00C9156C /* LaunchScreen.storyboard */,
 				32A4812C2333F3FD00C9156C /* Info.plist */,
-				3287FFFC23367589008DBCEA /* TragexTableViewController.swift */,
-				32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */,
 			);
 			path = TRAGEX;
 			sourceTree = "<group>";
@@ -509,7 +527,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcocaldera.TRAGEX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "/Users/marcocaldera/Documents/Progetti GIT/clips/TRAGEX/TRAGEX/Tragex-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -534,7 +552,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcocaldera.TRAGEX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "/Users/marcocaldera/Documents/Progetti GIT/clips/TRAGEX/TRAGEX/Tragex-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
