@@ -1,70 +1,90 @@
 //
-//  OptionsDetailTableViewController.swift
+//  TripTableViewController.swift
 //  TRAGEX
 //
-//  Created by Marco Caldera on 21/09/2019.
+//  Created by Marco Caldera on 25/09/2019.
 //  Copyright © 2019 Marco Caldera. All rights reserved.
 //
 
 import UIKit
 
-class OptionsDetailTableViewController: UITableViewController {
+class TripTableViewController: UITableViewController {
     
-    var criteriaList = [Criteria]()
-    weak var delegate: TragexTableViewController!
-    var criteriaIndex:Int = 0
+    var infoList = Trip()
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+//        self.infoList = ["Cao", "come", "va"]
+//        self.tableView.reloadData()
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
-    
-    
 
     // MARK: - Table view data source
 
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        switch section {
+        case 0:
+            return "Tappe"
+        case 1:
+            return "Report"
+        default:
+            return nil
+        }
+//        return nil
+    }
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         // #warning Incomplete implementation, return the number of sections
-        return 1
+        return 2
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return self.criteriaList.count
+        return section == 0 ? self.infoList.placeSequence.count : 3
     }
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "criteriaCell", for: indexPath)
-
-        let criteria: Criteria = self.criteriaList[indexPath.row]
         
-        cell.textLabel?.text = criteria.name
-        
-        if criteria.checked {
-            cell.accessoryType = UITableViewCell.AccessoryType.checkmark
+        if indexPath.section == 0 {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "tripPlace", for: indexPath)
+            cell.textLabel?.text = self.infoList.placeSequence[indexPath.row]
+            cell.detailTextLabel?.text = self.infoList.resortSequence[indexPath.row] + " (" + String(self.infoList.pricePerNight[indexPath.row]) + "€)"
+            let label = UILabel.init(frame: CGRect(x:0,y:0,width:10,height:20))
+            label.text = String(self.infoList.daysDistributions[indexPath.row])
+            label.textColor = UIColor.systemBlue
+            label.font = UIFont(name:"HelveticaNeue-Bold", size: 16.0)
+            cell.accessoryView = label
+            
+            return cell
+            
+        } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "reportCell", for: indexPath)
+            
+            switch indexPath.row {
+            case 0:
+                cell.textLabel?.text = "Certainty"
+                print(self.infoList.certainties * 100)
+                cell.detailTextLabel?.text = String(format:"%.2d", Int((self.infoList.certainties * 100).rounded(.up)))+"%"
+            case 1:
+                cell.textLabel?.text = "N° di giorni"
+                cell.detailTextLabel?.text = String(self.infoList.daysDistributions.reduce(0, +))
+            case 2:
+                cell.textLabel?.text = "Costo totale"
+                cell.detailTextLabel?.text = String(self.infoList.pricePerNight.reduce(0, +)) + "€"
+            default:
+                break
+            }
+            
+            return cell
         }
-
-        return cell
     }
     
-    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        for i in 0...self.criteriaList.count-1 {
-            if i == indexPath.row {
-                self.criteriaList[i].checked = true
-            } else { self.criteriaList[i].checked = false }
-        }
-        
-        delegate.optionsList[self.criteriaIndex].options = self.criteriaList
-        //Torna alla view precedente
-        self.navigationController?.popViewController(animated: true)
-    }
 
     /*
     // Override to support conditional editing of the table view.

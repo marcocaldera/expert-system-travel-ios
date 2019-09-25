@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface Function : NSObject
 
--(struct multifield *)isUserModelValid:(void *) clipsEnv result:(DATA_OBJECT) result;
+-(NSMutableArray *)isUserModelValid:(void *) clipsEnv result:(DATA_OBJECT) result;
 
 @end
 

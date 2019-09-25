@@ -11,6 +11,7 @@ import CLIPSiOS
 
 class TragexTableViewController: UITableViewController {
     
+    var bestTripList = [Trip]()
     var optionsList = [TravelBanchmark]()
     let clipsEnv = CreateEnvironment()
     let filePath = Bundle.main.path(forResource: "combination", ofType: "clp", inDirectory: "Rules")
@@ -41,7 +42,6 @@ class TragexTableViewController: UITableViewController {
     
     
     @IBAction func start(_ sender: Any) {
-        print("cavolo")
         EnvReset(clipsEnv);
 
 //        EnvAssertString(clipsEnv,"(permutation (values madonna)")
@@ -53,8 +53,20 @@ class TragexTableViewController: UITableViewController {
         var outputValue: DATA_OBJECT = DATA_OBJECT.init();
         EnvEval(clipsEnv, expression, &outputValue)
         
-        Function.init().isUserModelValid(clipsEnv!, result: outputValue)
-        print("fino a qua")
+        bestTripList = Function.init().isUserModelValid(clipsEnv!, result: outputValue) as! [Trip]
+        bestTripList = bestTripList.sorted(by: { $0.certainties > $1.certainties })
+        
+//        for trip in bestTripList {
+//            print(trip.certainties)
+//            print(trip.daysDistributions)
+//            print(trip.resortSequence)
+//            print(trip.placeSequence)
+//            print(trip.pricePerNight)
+//            print("---------------")
+//        }
+
+        print("fatto")
+        self.tableView.reloadData()
         
     }
     
@@ -66,28 +78,53 @@ class TragexTableViewController: UITableViewController {
 
     // MARK: - Table view data source
 
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        switch section {
+        case 0:
+            return "Criteria"
+        case 1:
+            if bestTripList.count != 0 {
+                return "Trip"
+            }
+        default:
+            return nil
+        }
+        return nil
+    }
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         // #warning Incomplete implementation, return the number of sections
-        return 1
+        return 2
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return self.optionsList.count
+        return section == 0 ? self.optionsList.count : self.bestTripList.count
     }
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "optionCell", for: indexPath)
         
-        let travelBanchmark = self.optionsList[indexPath.row]
-        
-        //Testo a sx
-        cell.textLabel?.text = travelBanchmark.name
-        
-        //Testo a dx (checked deve essere a true)
-        if let option = travelBanchmark.options.first(where: {$0.checked}) {
-            cell.detailTextLabel?.text = option.name
+        if indexPath.section == 0 {
+            let travelBanchmark = self.optionsList[indexPath.row]
+            
+            //Testo a sx
+            cell.textLabel?.text = travelBanchmark.name
+            
+            //Testo a dx (checked deve essere a true)
+            if let option = travelBanchmark.options.first(where: {$0.checked}) {
+                cell.detailTextLabel?.text = option.name
+            }
+            
+            
+        } else {
+            let trip = self.bestTripList[indexPath.row]
+            
+            cell.textLabel?.text = trip.placeSequence.joined(separator:" ")
+            cell.detailTextLabel?.text = String(format:"%.2f", trip.certainties)
+            cell.detailTextLabel?.textColor = UIColor.systemBlue
+            cell.detailTextLabel?.font = UIFont(name:"HelveticaNeue-Bold", size: 16.0)
         }
         
         //Freccia indicatrice
@@ -125,7 +162,12 @@ class TragexTableViewController: UITableViewController {
     */
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        self.performSegue(withIdentifier: "selectOptionSegue", sender: tableView)
+        
+        if indexPath.section == 0 {
+            self.performSegue(withIdentifier: "selectOptionSegue", sender: tableView)
+        } else {
+            self.performSegue(withIdentifier: "tripSegue", sender: tableView)
+        }
     }
 
     /*
@@ -142,15 +184,20 @@ class TragexTableViewController: UITableViewController {
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         
-        let optionsTableViewController = segue.destination as! OptionsDetailTableViewController
-        
-        let travelBanchmark = self.optionsList[self.tableView.indexPathForSelectedRow!.row]
-        
-        optionsTableViewController.delegate = self
-        optionsTableViewController.title = travelBanchmark.name
-        optionsTableViewController.criteriaList = travelBanchmark.options
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
+        if segue.identifier == "selectOptionSegue" {
+            let optionsTableViewController = segue.destination as! OptionsDetailTableViewController
+            
+            let travelBanchmark = self.optionsList[self.tableView.indexPathForSelectedRow!.row]
+            
+            optionsTableViewController.delegate = self
+            optionsTableViewController.title = travelBanchmark.name
+            optionsTableViewController.criteriaList = travelBanchmark.options
+            optionsTableViewController.criteriaIndex = self.tableView.indexPathForSelectedRow!.row
+        } else {
+            let tripTableViewController = segue.destination as! TripTableViewController
+            tripTableViewController.title = self.bestTripList[self.tableView.indexPathForSelectedRow!.row].placeSequence.joined(separator:" ")
+            tripTableViewController.infoList = self.bestTripList[self.tableView.indexPathForSelectedRow!.row]
+        }
     }
     
 

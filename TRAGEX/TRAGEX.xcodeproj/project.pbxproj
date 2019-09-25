@@ -21,6 +21,8 @@
 		32A481582333F91700C9156C /* CLIPSiOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32A481572333F91600C9156C /* CLIPSiOS.framework */; };
 		32A481592333F91700C9156C /* CLIPSiOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 32A481572333F91600C9156C /* CLIPSiOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		32A481612333FB3D00C9156C /* Rules in Resources */ = {isa = PBXBuildFile; fileRef = 32A481602333FB3D00C9156C /* Rules */; };
+		32D26D04233A49A3003BADE0 /* Trip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D26D03233A49A3003BADE0 /* Trip.swift */; };
+		32F24A98233BB0240037C26C /* TripTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F24A97233BB0240037C26C /* TripTableViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,7 +77,9 @@
 		32A481422333F3FD00C9156C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A481572333F91600C9156C /* CLIPSiOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CLIPSiOS.framework; sourceTree = "<group>"; };
 		32A481602333FB3D00C9156C /* Rules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Rules; path = ../../Rules; sourceTree = "<group>"; };
+		32D26D03233A49A3003BADE0 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
 		32E5C6562338E16D00A392D7 /* Tragex-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tragex-Bridging-Header.h"; sourceTree = "<group>"; };
+		32F24A97233BB0240037C26C /* TripTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripTableViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				32568DBB2337CFFB00E49446 /* TravelBanchmark.swift */,
+				32D26D03233A49A3003BADE0 /* Trip.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -117,6 +122,7 @@
 			children = (
 				3287FFFE23367DA5008DBCEA /* OptionsDetailTableViewController.swift */,
 				3287FFFC23367589008DBCEA /* TragexTableViewController.swift */,
+				32F24A97233BB0240037C26C /* TripTableViewController.swift */,
 			);
 			path = TableView;
 			sourceTree = "<group>";
@@ -334,6 +340,8 @@
 				3270D39B2334ECC70004BEF9 /* Function.m in Sources */,
 				32A481232333F3FB00C9156C /* ViewController.swift in Sources */,
 				32A481212333F3FB00C9156C /* AppDelegate.swift in Sources */,
+				32D26D04233A49A3003BADE0 /* Trip.swift in Sources */,
+				32F24A98233BB0240037C26C /* TripTableViewController.swift in Sources */,
 				3287FFFF23367DA5008DBCEA /* OptionsDetailTableViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
