@@ -14,7 +14,7 @@ class TragexTableViewController: UITableViewController {
     var bestTripList = [Trip]()
     var optionsList = [TravelBanchmark]()
     let clipsEnv = CreateEnvironment()
-    let filePath = Bundle.main.path(forResource: "combination", ofType: "clp", inDirectory: "Rules")
+    let filePath = Bundle.main.path(forResource: "travel-agency", ofType: "clp", inDirectory: "Rules")
     
 
     override func viewDidLoad() {
@@ -25,11 +25,62 @@ class TragexTableViewController: UITableViewController {
 //        EnvWatch(clipsEnv,"facts");
         
         self.optionsList = [
-            TravelBanchmark(name: "A", options:[Criteria(name: "1A",checked: false), Criteria(name: "2A",checked: true)]),
-            TravelBanchmark(name: "B", options:[Criteria(name: "1B",checked: true), Criteria(name: "2B",checked: false)]),
-            TravelBanchmark(name: "C", options:[Criteria(name: "1C",checked: false), Criteria(name: "2C",checked: true)])
+            TravelBanchmark(name: "Budget",
+                            key: "travel-budget",
+                            options:[
+                                Criteria(name: "500",checked: true),
+                                Criteria(name: "600",checked: false),
+                                Criteria(name: "800",checked: false),
+                                Criteria(name: "900",checked: false),
+                                Criteria(name: "1500",checked: false)]
+            ),
+            TravelBanchmark(name: "N° di persone",
+                            key: "people-number",
+                            options:[
+                                Criteria(name: "2",checked: true),
+                                Criteria(name: "3",checked: false),
+                                Criteria(name: "4",checked: false),
+                                Criteria(name: "5",checked: false),
+                                Criteria(name: "6",checked: false),
+                                Criteria(name: "7",checked: false)]
+            ),
+            TravelBanchmark(name: "Durata viaggio",
+                            key: "travel-duration",
+                            options:[
+                                Criteria(name: "3",checked: true),
+                                Criteria(name: "4",checked: false),
+                                Criteria(name: "5",checked: false),
+                                Criteria(name: "6",checked: false),
+                                Criteria(name: "7",checked: false),
+                                Criteria(name: "8",checked: false)]
+            ),
+            TravelBanchmark(name: "N° minimo di stelle",
+                            key: "min-resort-star",
+                            options:[
+                                Criteria(name: "unknown",checked: true),
+                                Criteria(name: "2",checked: false),
+                                Criteria(name: "3",checked: false),
+                                Criteria(name: "4",checked: false)]
+            ),
+            TravelBanchmark(name: "N° di posti da visitare",
+                            key: "number-of-place",
+                            options:[
+                                Criteria(name: "unknown",checked: true),
+                                Criteria(name: "2",checked: false),
+                                Criteria(name: "3",checked: false),
+                                Criteria(name: "4",checked: false),
+                                Criteria(name: "5",checked: false)]
+            ),
+            TravelBanchmark(name: "Regione preferita",
+                            key: "favourite-region",
+                            options:[
+                                Criteria(name: "unknown",checked: true),
+                                Criteria(name: "piemonte",checked: false),
+                                Criteria(name: "liguria",checked: false),
+                                Criteria(name: "lombardia",checked: false)]
+            )
         ]
-        
+//        
         // Invoca i metodi che ricaricano i dati
         self.tableView.reloadData()
 
@@ -42,19 +93,33 @@ class TragexTableViewController: UITableViewController {
     
     
     @IBAction func start(_ sender: Any) {
-        EnvReset(clipsEnv);
-
-//        EnvAssertString(clipsEnv,"(permutation (values madonna)")
-        EnvRun(clipsEnv,-1);
+//        EnvWatch(clipsEnv, "facts")
         
+        EnvReset(clipsEnv);
+    
+        for item in optionsList {
+//            print("(travel-banchmark (name \(item.key)) (value 1000) (certainty 1.0))")
+//            EnvAssertString(clipsEnv,"(travel-banchmark (name \(item.key)) (value 1000) (certainty 1.0))")
+            if let option = item.options.first(where: {$0.checked}) {
+                EnvAssertString(
+                    clipsEnv,
+                    String(format: "(travel-banchmark (name %@) (value %@) (certainty 1.0))", item.key, option.name)
+                )
+            }
+        }
+        
+        EnvRun(clipsEnv,-1);
+
         EnvFocus(clipsEnv, EnvFindDefmodule(clipsEnv, "TRIP"))
         let expression = "(find-all-facts ((?f trip)) TRUE)";
-//        let expression = "(find-all-facts ((?f travel-banchmark)) TRUE)";
+
         var outputValue: DATA_OBJECT = DATA_OBJECT.init();
         EnvEval(clipsEnv, expression, &outputValue)
-        
+
         bestTripList = Function.init().isUserModelValid(clipsEnv!, result: outputValue) as! [Trip]
         bestTripList = bestTripList.sorted(by: { $0.certainties > $1.certainties })
+        
+        
         
 //        for trip in bestTripList {
 //            print(trip.certainties)
@@ -93,7 +158,7 @@ class TragexTableViewController: UITableViewController {
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
+        
         return 2
     }
 
@@ -120,11 +185,17 @@ class TragexTableViewController: UITableViewController {
             
         } else {
             let trip = self.bestTripList[indexPath.row]
-            
+
             cell.textLabel?.text = trip.placeSequence.joined(separator:" ")
             cell.detailTextLabel?.text = String(format:"%.2f", trip.certainties)
             cell.detailTextLabel?.textColor = UIColor.systemBlue
             cell.detailTextLabel?.font = UIFont(name:"HelveticaNeue-Bold", size: 16.0)
+            
+//            cell.selectionStyle = .none
+//            cell.backgroundColor = UIColor.clear
+//            cell.textLabel?.textColor = UIColor.black
+//            cell.textLabel?.text = "TEXT YOU WANT THE 'CELL' TO DISPLAY"
+            
         }
         
         //Freccia indicatrice

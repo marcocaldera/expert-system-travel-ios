@@ -10,6 +10,7 @@ import Foundation
 
 struct TravelBanchmark {
     let name: String
+    let key: String
     var options: [Criteria]
 }
 

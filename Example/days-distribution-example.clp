@@ -8,7 +8,7 @@
 )
 
 (deffacts initial
-   (travel-banchmark (name travel-duration) (value 9))
+   (travel-banchmark (name travel-duration) (value 4))
    (trip (place-sequence milano roma venezia) (days-distribution 1 1 1))
 )
 

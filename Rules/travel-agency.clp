@@ -53,23 +53,23 @@
     (bind ?lat (deg-rad (- ?lat2 ?lat1)))
     (bind ?lon (deg-rad (- ?lon2 ?lon1)))
 
-    (bind ?a (+ 
-        (* 
-            (sin (/ ?lat 2)) 
+    (bind ?a (+
+        (*
             (sin (/ ?lat 2))
-        ) 
-        (* 
-            (* 
+            (sin (/ ?lat 2))
+        )
+        (*
+            (*
                 (cos (deg-rad ?lat1))
                 (cos (deg-rad ?lat2))
             )
-            (* 
+            (*
                 (sin (/ ?lon 2))
                 (sin (/ ?lon 2))
             )
         )
     ))
-    (bind ?c (* 
+    (bind ?c (*
         2
         (atan2 (sqrt ?a) (sqrt (- 1 ?a)))
     ))
@@ -98,7 +98,6 @@
     (slot name)
     (slot value)
     (slot certainty (type FLOAT) (range -1.0 +1.0) (default 1.0))
-    (slot inferred (default TRUE))
 )
 
 ;;;** REGOLE MODULO MAIN **
@@ -108,25 +107,25 @@
     (declare (salience 10000)) ;Indico la salience massima possibile (10.000)
     =>
     (set-fact-duplication TRUE);Permette di avere fatti duplicati
-    (focus RULES LOCATION TRIP TRIP2 BUILDSOLUTION PRINTRESULT);Indico l'ordine dello stack focus
+    (focus RULES LOCATION TRIP BUILDSOLUTION PRINTRESULT);Indico l'ordine dello stack focus
     ; (focus QUESTIONS RULES LOCATION TRIP TRIP2 BUILDSOLUTION);Indico l'ordine dello stack focus
 )
 
 (deffacts MAIN::test-fact
-    (travel-banchmark (name travel-duration) (value 5) (certainty 1.0))
-    (travel-banchmark (name travel-budget) (value 1000) (certainty 1.0))
-    (travel-banchmark (name people-number) (value 3) (certainty 1.0))
-    (travel-banchmark (name min-resort-star) (value 3) (certainty 1.0))
-    (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
+;    (travel-banchmark (name travel-duration) (value 5) (certainty 1.0))
+;    (travel-banchmark (name travel-budget) (value 1000) (certainty 1.0))
+;    (travel-banchmark (name people-number) (value 3) (certainty 1.0))
+;    (travel-banchmark (name min-resort-star) (value 3) (certainty 1.0))
+;    (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
     (travel-banchmark (name trip-type) (value culturale) (certainty 1.0))
     (travel-banchmark (name personal-trait) (value avventura) (certainty 1.0))
-    (travel-banchmark (name favourite-region) (value piemonte) (certainty 1.0))
+;    (travel-banchmark (name favourite-region) (value piemonte) (certainty 1.0))
 )
 
 (deffunction MAIN::new-certainty (?c1 ?c2)
     (if (and (>= ?c1 0) (>= ?c2 0))
     then (return (- (+ ?c1 ?c2) (* ?c1 ?c2)));(c1+c2)-(c1*c2)
-    else (if (and (< ?c1 0) (< ?c2 0)) 
+    else (if (and (< ?c1 0) (< ?c2 0))
         then (return (+ (+ ?c1 ?c2) (* ?c1 ?c2)));(c1+c2)+(c1*c2)
          else (return (/ (+ ?c1 ?c2) (- 1 (min (abs ?c1) (abs ?c2)))));(c1+c2)/(1-min(|c1|,|c2|))
         )
@@ -155,24 +154,24 @@
 
 ;Località turistiche presenti sul territorio italiano
 (deftemplate LOCATION::place
-    (slot name (default ?NONE));?NONE indica che il campo name è obbligatorio
-    (slot region)
-    (slot ID)
-    (multislot coordinates (cardinality 2 2))
+    (slot name (type SYMBOL));?NONE indica che il campo name è obbligatorio
+    (slot region (type SYMBOL))
+    (slot ID (type INTEGER))
+    (multislot coordinates (type FLOAT) (cardinality 2 2))
 )
 
 (deftemplate LOCATION::tourism-type
-    (slot place-ID)
-    (slot type)
-    (slot score)
+    (slot place-ID (type INTEGER))
+    (slot type (type SYMBOL))
+    (slot score (type INTEGER))
 )
 
 ;Alberghi presenti sul territorio italiano
 (deftemplate LOCATION::resort
-    (slot name (default ?NONE));?NONE indica che il campo name è obbligatorio
-    (slot star);stelle dell'albergo
-    (slot rooms-number);numero di camere disponibili nell'hotel
-    (slot place-ID);nome della località turistica
+    (slot name (type SYMBOL));?NONE indica che il campo name è obbligatorio
+    (slot star (type INTEGER));stelle dell'albergo
+    (slot rooms-number (type INTEGER));numero di camere disponibili nell'hotel
+    (slot place-ID (type INTEGER));nome della località turistica
 )
 
 ;;;** REGOLE MODULO LOCATION ***********************************************************************
@@ -183,13 +182,13 @@
 ;Escludo i resort in cui non ci possono stare tutte le persone del viaggio insieme
 ;Escludo i resort che non hanno tourism type in comune con i banchmark
 ;Declasso i resort che non sono nella fav-region (se questa è stata inserita)
-(defrule LOCATION::select-location  
-    (place 
+(defrule LOCATION::select-location
+    (place
         (name ?place-name)
         (region ?region)
         (ID ?id)
     )
-    (tourism-type 
+    (tourism-type
         (place-ID ?id)
         (type ?tourism-type)
         (score ?score)
@@ -342,28 +341,18 @@
 ;;****************
 (defmodule TRIP (import MAIN ?ALL) (import LOCATION ?ALL) (export ?ALL))
 
-; (deftemplate TRIP::trip
-;     (multislot resort-sequence)
-; )
-
-; (deftemplate TRIP::link
-;     (slot resort1)
-;     (slot resort2)
-;     (slot distance)
-; )
 (deftemplate TRIP::trip
    (multislot resort-sequence)
    (multislot place-sequence)
    (multislot certainties)
    (multislot days-distribution)
    (multislot price-per-night)
-   (slot build (default FALSE));serve in build solution 
+   (slot build (default FALSE));serve in build solution
    (slot penalty (default FALSE))
 )
 
-;qui ci potrebbe stare il controllo ?duration >= ?number-of-place 
 (defrule TRIP::first-in-permutation
-    (travel-banchmark (name number-of-place) (value ?k))
+    (travel-banchmark (name number-of-place) (value ?k&~unknown))
    ; (k-combination ~0)
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
    (travel-banchmark (name number-of-place) (value ?number-of-place))
@@ -373,11 +362,11 @@
    (place (name ?city) (ID ?ID))
    
    =>
-   ;Imposto che vada fatto almeno un giorno in ogni meta (in base al numero di mete richieste)  
+   ;Imposto che vada fatto almeno un giorno in ogni meta (in base al numero di mete richieste)
    ; (bind ?array (create$))
    ; (loop-for-count ?number-of-place do (bind ?array (insert$ ?array 1 1)))
 
-   (assert (trip 
+   (assert (trip
     (resort-sequence ?resort-name)
     (place-sequence ?city)
     (certainties ?c)
@@ -387,7 +376,7 @@
 )
 
 (defrule TRIP::next-in-permutation
-    (travel-banchmark (name number-of-place) (value ?k))
+    (travel-banchmark (name number-of-place) (value ?k&~unknown))
     (travel-banchmark (name people-number) (value ?people-number))
 
     ;recupero insieme le informazioni su un resort (con il luogo in cui è situato - city- e le info sul numero di stelle)
@@ -406,7 +395,7 @@
    (test (< (length$ ?cities) ?k));il numero di città da visitare deve essere inferiore al vincolo sul numero di mete
    (test (not (member$ ?city ?cities)));la città non deve essere già presente (non visito due volte la stessa città in un viaggio)
    =>
-   (assert (trip 
+   (assert (trip
     (resort-sequence ?resorts ?resort-name)
     (place-sequence ?cities ?city)
     (certainties ?certainties ?c)
@@ -417,17 +406,17 @@
 
 (defrule TRIP::cleanup
    (declare (salience -5))
-   (travel-banchmark (name number-of-place) (value ?k))
+   (travel-banchmark (name number-of-place) (value ?k&~unknown))
    ?p <- (trip (place-sequence $?cities))
    (test (< (length$ ?cities) ?k))
    =>
    (retract ?p)
 )
 
-(defmodule TRIP2 (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
+; (defmodule TRIP2 (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
 
-(deffunction TRIP2::create-distributions (?cc ?p ?days ?duration ?budget $?distribution)
-   (bind ?max-alloc (- ?duration ?days (- ?cc 1)))   
+(deffunction TRIP::create-distributions (?cc ?p ?days ?duration ?budget $?distribution)
+   (bind ?max-alloc (- ?duration ?days (- ?cc 1)))
    (if (= ?cc 1)
       then
 
@@ -449,13 +438,17 @@
    (loop-for-count (?a ?max-alloc)
       (create-distributions (- ?cc 1) ?p (+ ?days ?a) ?duration ?budget ?distribution ?a)))
  
-(defrule TRIP2::distribute-days
+(defrule TRIP::distribute-days
     (travel-banchmark (name travel-duration) (value ?duration))
     (travel-banchmark (name travel-budget) (value ?budget))
     ?p <- (trip (place-sequence $?cities) (days-distribution))
+
+    (travel-banchmark (name number-of-place) (value ?k))
+    (test (eq (length$ ?cities) ?k))
     =>
     (bind ?city-count (length$ ?cities))
     (create-distributions ?city-count ?p 0 ?duration ?budget)
+
     (retract ?p))
 
 (defmodule BUILDSOLUTION (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
@@ -494,7 +487,7 @@
 (defrule BUILDSOLUTION::distance-penalty
     ?p <- (trip (certainties ?certainty) (place-sequence $?place-sequence) (build TRUE) (penalty FALSE))
     =>
-    ;?penalty mi serve per verificare che si stata assegnata una penalità e di conseguenza successivamente aggiornare il fatto ?p 
+    ;?penalty mi serve per verificare che si stata assegnata una penalità e di conseguenza successivamente aggiornare il fatto ?p
     (bind ?penalty FALSE)
     (loop-for-count (?i 1 (- (length$ ?place-sequence) 1))
         ;recupero il fatto relativo a quel place
@@ -504,7 +497,7 @@
         (bind ?temp-coord-1 (fact-slot-value ?temp-place-1 coordinates))
         (bind ?temp-coord-2 (fact-slot-value ?temp-place-2 coordinates))
 
-        (if (> (km-distance (expand$ ?temp-coord-1) (expand$ ?temp-coord-2)) 100) 
+        (if (> (km-distance (expand$ ?temp-coord-1) (expand$ ?temp-coord-2)) 100)
             then
             (bind ?penalty TRUE)
             ;declasso la certainty di questo trip
@@ -554,7 +547,7 @@
 ;     ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
 ;     (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
 ;     (test (subsetp $?place-sequence1 $?place-sequence2));serve per comparare anche se gli eleme sono in posizione diversa: milano venezia toirno = torino venezia milano
-;   => 
+;   =>
 ;   (retract ?trip)
 ;   ; (printout t ?place-sequence1 crlf)
 ;   ; ; (printout t ?resort-sequence crlf)
@@ -582,14 +575,15 @@
     (bind ?same-place-facts (find-all-facts ((?f trip)) (subsetp ?f:place-sequence ?place-sequence1)))
 
     ;scelgo randomicamente un indice da salvare come scelta migliore
-    (bind ?choosen-index (+ (mod (random) (length$ ?same-place-facts)) 1))
+    ; (bind ?choosen-index (+ (mod (random) (length$ ?same-place-facts)) 1))
+    (bind ?choosen-index 1)
 
     ;elimino tutti i fatti tra quelli dell'indice
     (loop-for-count (?i 1 (length$ ?same-place-facts))
         (if (neq ?choosen-index ?i) then (retract (nth$ ?i ?same-place-facts)))
     )
 
-)  
+)
 
 ; (defrule PRINTRESULT::final-test
 ;     (declare (salience -5))
@@ -600,7 +594,7 @@
 ;    (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence) (neq ?trip ?f)) (retract ?f))
 ;   ; (printout t ?place-sequence1 crlf)
 ;   ; (printout t ?certainty crlf)
-; )  
+; )
 
 ;;****************
 ;;* MODULO QUESTIONS *
@@ -634,7 +628,6 @@
         (travel-banchmark
             (name ?the-attribute)
             (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
-            (inferred FALSE)
         )
     )
 )
@@ -758,31 +751,31 @@
     )
     (rule
         (if trip-type is culturale)
-        (then tourism-type is culturale with certainty 0.4 and 
-            tourism-type is religioso with certainty 0.3 and 
+        (then tourism-type is culturale with certainty 0.4 and
+            tourism-type is religioso with certainty 0.3 and
             tourism-type is enogastronomico with certainty 0.2 and
             tourism-type is balneare with certainty 0.1)
     )
     (rule
         (if trip-type is rilassante)
-        (then tourism-type is balneare with certainty 0.4 and 
-            tourism-type is montano with certainty 0.4 and 
+        (then tourism-type is balneare with certainty 0.4 and
+            tourism-type is montano with certainty 0.4 and
             tourism-type is sportivo with certainty 0.4 and
             tourism-type is termale with certainty 0.3 and
             tourism-type is lacustre with certainty 0.3)
     )
     (rule
         (if personal-trait is avventura)
-        (then tourism-type is naturalistico with certainty 0.4 and 
-            tourism-type is balneare with certainty 0.1 and 
+        (then tourism-type is naturalistico with certainty 0.4 and
+            tourism-type is balneare with certainty 0.1 and
             tourism-type is sportivo with certainty 0.2 and
             tourism-type is termale with certainty 0.4 and
             tourism-type is lacustre with certainty 0.3)
     )
     (rule
         (if personal-trait is comodità)
-        (then tourism-type is balneare with certainty 0.5 and 
-            tourism-type is montano with certainty 0.5 and 
+        (then tourism-type is balneare with certainty 0.5 and
+            tourism-type is montano with certainty 0.5 and
             tourism-type is enogastronomico with certainty 0.5 and
             tourism-type is naturalistico with certainty 0.1)
     )

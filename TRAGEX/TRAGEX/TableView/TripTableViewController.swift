@@ -15,6 +15,7 @@ class TripTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        self.tableView.allowsSelection = false
 //        self.infoList = ["Cao", "come", "va"]
 //        self.tableView.reloadData()
         // Uncomment the following line to preserve selection between presentations
@@ -69,7 +70,6 @@ class TripTableViewController: UITableViewController {
             switch indexPath.row {
             case 0:
                 cell.textLabel?.text = "Certainty"
-                print(self.infoList.certainties * 100)
                 cell.detailTextLabel?.text = String(format:"%.2d", Int((self.infoList.certainties * 100).rounded(.up)))+"%"
             case 1:
                 cell.textLabel?.text = "N° di giorni"

@@ -31,7 +31,4 @@ import Foundation
     var placeSequence: [String] = []
     var pricePerNight: [Int] = []
     var daysDistributions: [Int] = []
-    
-    
-    
 }
