@@ -8,8 +8,8 @@
     (slot value))
 
 (deffacts initial
-   (travel-banchmark (name travel-duration) (value 5))
-   (trip (place-sequence milano roma venezia) (days-distribution)))
+   (travel-banchmark (name travel-duration) (value 3))
+   (trip (place-sequence milano) (days-distribution)))
 
 (deffunction create-distributions (?cc ?cities ?days ?duration $?distribution)
    (bind ?max-alloc (- ?duration ?days (- ?cc 1)))

@@ -46,6 +46,11 @@ class OptionsDetailTableViewController: UITableViewController {
         
         cell.textLabel?.text = criteria.name
         
+        if delegate.optionsList[self.criteriaIndex].key == "travel-budget" {
+            cell.textLabel?.text = criteria.name + "€"
+        }
+        
+        
         if criteria.checked {
             cell.accessoryType = UITableViewCell.AccessoryType.checkmark
         }

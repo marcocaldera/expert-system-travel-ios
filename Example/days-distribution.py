@@ -1,8 +1,8 @@
 class Test:
     # https://www.geeksforgeeks.org/count-ways-to-distribute-m-items-among-n-people/
     def __init__(self):
-        city_count = 3
-        duration = 5
+        city_count = 4
+        duration = 7
 
         self.create_distribution(city_count=city_count, days=0, duration=duration, distribution=[])
 

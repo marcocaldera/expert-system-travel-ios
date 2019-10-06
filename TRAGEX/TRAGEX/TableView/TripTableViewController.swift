@@ -54,8 +54,10 @@ class TripTableViewController: UITableViewController {
         
         if indexPath.section == 0 {
             let cell = tableView.dequeueReusableCell(withIdentifier: "tripPlace", for: indexPath)
+            
             cell.textLabel?.text = self.infoList.placeSequence[indexPath.row]
             cell.detailTextLabel?.text = self.infoList.resortSequence[indexPath.row] + " (" + String(self.infoList.pricePerNight[indexPath.row]) + "€)"
+            
             let label = UILabel.init(frame: CGRect(x:0,y:0,width:10,height:20))
             label.text = String(self.infoList.daysDistributions[indexPath.row])
             label.textColor = UIColor.systemBlue

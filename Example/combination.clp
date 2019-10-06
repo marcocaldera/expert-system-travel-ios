@@ -6,7 +6,7 @@
    (multislot values))
 
 (deffacts initial
-   (number-of-place 3)
+   (number-of-place 4)
    (travel-banchmark (name place) (value torino))
    (travel-banchmark (name place) (value roma))
    (travel-banchmark (name place) (value milano))
