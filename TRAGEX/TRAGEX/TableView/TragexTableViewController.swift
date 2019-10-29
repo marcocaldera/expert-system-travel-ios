@@ -14,7 +14,7 @@ class TragexTableViewController: UITableViewController {
     var bestTripList = [Trip]()
     var optionsList = [TravelBanchmark]()
     let clipsEnv = CreateEnvironment()
-    let filePath = Bundle.main.path(forResource: "travel-agency", ofType: "clp", inDirectory: "Rules")
+    let filePath = Bundle.main.path(forResource: "travel-agency_v2", ofType: "clp", inDirectory: "Rules")
     
 
     override func viewDidLoad() {

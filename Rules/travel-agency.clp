@@ -351,10 +351,10 @@
 )
 
 (defrule TRIP::first-in-permutation
-    (travel-banchmark (name number-of-place) (value ?k&~unknown))
+    ; (travel-banchmark (name number-of-place) (value ?k&~unknown))
    ; (k-combination ~0)
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
-   (travel-banchmark (name number-of-place) (value ?number-of-place))
+   ; (travel-banchmark (name number-of-place) (value ?number-of-place))
    (travel-banchmark (name people-number) (value ?people-number))
 
    (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
@@ -625,85 +625,85 @@
 ;;
 ;; Modulo per gestire le domande da porre all'utente
 ;;****************
-(defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
+; (defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
 
-(deftemplate QUESTIONS::question
-    (slot travel-banchmark (default ?NONE))
-    (slot the-question (default ?NONE))
-    (multislot valid-answers (default ?NONE))
-    (slot already-asked (default FALSE));forse non serve
-    (multislot precursors));possono anche non essercene
-)
+; (deftemplate QUESTIONS::question
+;     (slot travel-banchmark (default ?NONE))
+;     (slot the-question (default ?NONE))
+;     (multislot valid-answers (default ?NONE))
+;     (slot already-asked (default FALSE));forse non serve
+;     (multislot precursors));possono anche non essercene
+; )
 
 
-;;;** REGOLE MODULO QUESTIONS **
+; ;;;** REGOLE MODULO QUESTIONS **
 
-(defrule QUESTIONS::ask-a-question
-    ?f <- (question
-;            (already-asked FALSE) ;se non ho ancora fatto la domanda
-            (precursors);se la domanda non ha precursori
-            (the-question ?the-question)
-            (travel-banchmark ?the-attribute)
-            (valid-answers $?valid-answers)
-    )
-    =>
-;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
-    (assert
-        (travel-banchmark
-            (name ?the-attribute)
-            (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
-        )
-    )
-)
+; (defrule QUESTIONS::ask-a-question
+;     ?f <- (question
+; ;            (already-asked FALSE) ;se non ho ancora fatto la domanda
+;             (precursors);se la domanda non ha precursori
+;             (the-question ?the-question)
+;             (travel-banchmark ?the-attribute)
+;             (valid-answers $?valid-answers)
+;     )
+;     =>
+; ;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
+;     (assert
+;         (travel-banchmark
+;             (name ?the-attribute)
+;             (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
+;         )
+;     )
+; )
 
 ;;;** FATTI MODULO QUESTIONS **
 
-(deffacts QUESTIONS::question-list
-    (question
-        (travel-banchmark travel-duration)
-        (the-question "Quanto deve durare il viaggio?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark travel-budget)
-        (the-question "Quanto sei disposto a spendere?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark people-number)
-        (the-question "Quante persone partecipano al viaggio?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark min-resort-star)
-        (the-question "Quante stelle deve almeno avere l'hotel?")
-        (valid-answers number unknown)
-    )
-    (question
-        (travel-banchmark number-of-place)
-        (the-question "Quante mete vuoi visitare?")
-        (valid-answers number unknown)
-    )
-    (question
-        (travel-banchmark trip-type)
-        (the-question "Preferisci una vacanza culturale o rilassante?")
-        (valid-answers culturale rilassante unknown)
-    )
-    (question
-        (travel-banchmark personal-trait)
-        (the-question "Preferisci di più vivere l'avventura o la comodità?")
-        (valid-answers avventura comodità unknown)
-    )
-    (question
-        (travel-banchmark favourite-region)
-        (the-question "Quale regione preferisci?")
-        (valid-answers piemonte liguria unknown)
-    )
+; (deffacts QUESTIONS::question-list
+;     (question
+;         (travel-banchmark travel-duration)
+;         (the-question "Quanto deve durare il viaggio?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark travel-budget)
+;         (the-question "Quanto sei disposto a spendere?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark people-number)
+;         (the-question "Quante persone partecipano al viaggio?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark min-resort-star)
+;         (the-question "Quante stelle deve almeno avere l'hotel?")
+;         (valid-answers number unknown)
+;     )
+;     (question
+;         (travel-banchmark number-of-place)
+;         (the-question "Quante mete vuoi visitare?")
+;         (valid-answers number unknown)
+;     )
+;     (question
+;         (travel-banchmark trip-type)
+;         (the-question "Preferisci una vacanza culturale o rilassante?")
+;         (valid-answers culturale rilassante unknown)
+;     )
+;     (question
+;         (travel-banchmark personal-trait)
+;         (the-question "Preferisci di più vivere l'avventura o la comodità?")
+;         (valid-answers avventura comodità unknown)
+;     )
+;     (question
+;         (travel-banchmark favourite-region)
+;         (the-question "Quale regione preferisci?")
+;         (valid-answers piemonte liguria unknown)
+;     )
 
-    ;unknown
-    ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
-    ;regione che non si vuole visitare? (certainty -1.0)
-)
+;     ;unknown
+;     ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
+;     ;regione che non si vuole visitare? (certainty -1.0)
+; )
 
 ;;****************
 ;;* MODULO RULES *

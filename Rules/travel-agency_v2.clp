@@ -112,11 +112,11 @@
 )
 
 (deffacts MAIN::test-fact
-   ; (travel-banchmark (name travel-duration) (value 7) (certainty 1.0))
-   ; (travel-banchmark (name travel-budget) (value 900) (certainty 1.0))
+   ; (travel-banchmark (name travel-duration) (value 4) (certainty 1.0))
+   ; (travel-banchmark (name travel-budget) (value 9000) (certainty 1.0))
    ; (travel-banchmark (name people-number) (value 2) (certainty 1.0))
    ; (travel-banchmark (name min-resort-star) (value unknown) (certainty 1.0))
-   ; (travel-banchmark (name number-of-place) (value 4) (certainty 1.0))
+   ; (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
    ; (travel-banchmark (name trip-type) (value unknown) (certainty 1.0))
    ; (travel-banchmark (name personal-trait) (value unknown) (certainty 1.0))
    ; (travel-banchmark (name favourite-region) (value unknown) (certainty 1.0))
@@ -214,7 +214,7 @@
                 (travel-banchmark
                     (name location);creiamo un banchmark di tipo location
                     (value ?resort-name)
-                    (certainty -0.3)
+                    (certainty -0.1)
                 )
             )
     )
@@ -351,25 +351,26 @@
 )
 
 (defrule TRIP::first-in-permutation
-    (travel-banchmark (name number-of-place) (value ?k&~unknown))
-   ; (k-combination ~0)
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
-   (travel-banchmark (name number-of-place) (value ?number-of-place))
    (travel-banchmark (name people-number) (value ?people-number))
 
    (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
    (place (name ?city) (ID ?ID))
-   
+
+   (travel-banchmark (name travel-duration) (value ?duration))
+   (travel-banchmark (name number-of-place) (value ?number-of-place&~unknown))
+   (test (<= ?number-of-place ?duration)) ; Il numero di posti da visitare deve essere <= alla durata del viaggio
+   ; (test (> ?c 0.3)); cf della prima città deve essere > di 0.5
    =>
    ;Imposto che vada fatto almeno un giorno in ogni meta (in base al numero di mete richieste)
    ; (bind ?array (create$))
-   ; (loop-for-count ?number-of-place do (bind ?array (insert$ ?array 1 1)))
+   ; (loop-for-count ?number-of-place do (bind ?array (insert$ ?array 1 (div ?duration ?city-count))))
 
    (assert (trip
     (resort-sequence ?resort-name)
     (place-sequence ?city)
     (certainties ?c)
-    (days-distribution);(days-distribution ?array)
+    ; (days-distribution ?array)
     (price-per-night (get-price-per-night ?star-number ?people-number))
     ))
 )
@@ -382,12 +383,12 @@
     (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
     (place (name ?city) (ID ?ID))
     (resort (name ?resort-name) (place-ID ?ID) (star ?star-number))
-
+    ; (test (> ?c 0.3))
    ?p <- (trip
     (resort-sequence $?resorts)
     (place-sequence $?cities)
     (certainties $?certainties)
-    ; (days-distribution)
+    (days-distribution $?days-distribution)
     (price-per-night $?prices)
     )
 
@@ -398,7 +399,7 @@
     (resort-sequence ?resorts ?resort-name)
     (place-sequence ?cities ?city)
     (certainties ?certainties ?c)
-    ; (days-distribution)
+    (days-distribution ?days-distribution)
     (price-per-night ?prices (get-price-per-night ?star-number ?people-number))
     ))
 )
@@ -412,60 +413,47 @@
    (retract ?p)
 )
 
-; (defmodule TRIP2 (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
-
-(deffunction TRIP::create-distributions (?cc ?p ?days ?duration ?budget $?distribution)
-   (bind ?max-alloc (- ?duration ?days (- ?cc 1)))
-   (if (= ?cc 1)
-      then
-
-      (bind ?price-per-night (fact-slot-value ?p price-per-night))
-      (bind ?days-distribution (create$ ?distribution ?max-alloc))
-
-      (loop-for-count (?cnt1 1 (length$ ?days-distribution))
-        ;rimpiazzo il valore che c'è all'indice ?cnt1 dentro price-per-night con il suo valore moltiplicato per il numero che c'è all'indice ?cnt1 all'interno di ?days-distribution
-        (bind ?price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?price-per-night) (nth$ ?cnt1 ?days-distribution))))
-        )
-
-
-      ; (if (<= (+ 0 (expand$ ?price-per-night)) ?budget) then
-
-      ;   ;creo la cf finale
-      ;   (bind ?new-cf 0)
-      ;   (bind ?certainties (fact-slot-value ?p certainties))
-      ;   (loop-for-count (?i 1 (length$ ?certainties))
-      ;       (bind ?day (nth$ ?i ?days-distribution))
-      ;       (bind ?cf (nth$ ?i ?certainties))
-      ;       (bind ?new-cf (+ ?new-cf (* ?day ?cf)))
-      ;   )
-
-      ;   ;calcolo la cf del trip (come media)
-      ;   (bind ?trip-cf (/ ?new-cf (+ (expand$ ?days-distribution))))
-
-      ;   ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
-      ;   (if (> ?trip-cf 0.2) then (duplicate ?p (certainties ?trip-cf) (price-per-night ?price-per-night) (days-distribution ?days-distribution)))
-      ;   )
-
-        ;if che verifica se viene superato il budget
-      (if (<= (+ 0 (expand$ ?price-per-night)) ?budget) then
-        ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
-        (duplicate ?p (price-per-night ?price-per-night) (days-distribution ?days-distribution))
-        )
-      
-      (return))
-   (loop-for-count (?a ?max-alloc)
-      (create-distributions (- ?cc 1) ?p (+ ?days ?a) ?duration ?budget ?distribution ?a)))
- 
 (defrule TRIP::distribute-days
     (travel-banchmark (name travel-duration) (value ?duration))
     (travel-banchmark (name travel-budget) (value ?budget))
-    ?p <- (trip (place-sequence $?cities) (days-distribution))
+    ?p <- (trip (place-sequence $?cities) (price-per-night $?price-per-night) (days-distribution $?days-distribution))
 
     (travel-banchmark (name number-of-place) (value ?k&~unknown))
     (test (eq (length$ ?cities) ?k))
+    (test (eq (length$ ?days-distribution) 0));Non devono essere già stata calcolata la distribuzione dei giorni
+
     =>
-    (bind ?city-count (length$ ?cities))
-    (create-distributions ?city-count ?p 0 ?duration ?budget)
+
+    (bind ?city-count (length$ ?cities)); Numero di città
+
+    (bind ?days-distribution (create$))
+    (loop-for-count (?cnt1 1 ?city-count)
+        ; Distribuisco i giorni uniformemente
+        (bind ?days-distribution (insert$ ?days-distribution 1 (div ?duration ?city-count)))
+        ; Aggiorno i prezzi per notte in base ai giorni appena distribuiti
+        (bind ?price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?price-per-night) (nth$ ?cnt1 ?days-distribution))))
+    )
+
+    (if (neq (mod ?duration ?city-count) 0) then 
+        (loop-for-count (?cnt1 1 ?city-count)
+            ; Aggiungo i giorni rimanenti in posizione ?cnt1
+            (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (div ?duration ?city-count) (mod ?duration ?city-count))))
+            ; (printout t ?new-days-distribution crlf)
+            ; Aggiorno il costo delle notti nel place n° ?cnt1 considerano anche i nuovi giorni appena aggiuni
+            (bind ?new-price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (div (nth$ ?cnt1 ?price-per-night) (div ?duration ?city-count)) (nth$ ?cnt1 ?new-days-distribution))))
+            ; (printout t ?new-price-per-night crlf)
+
+            ; Se complessivamente non supera il budget, creo il trip
+            (if (<= (+ 0 (expand$ ?new-price-per-night)) ?budget) then
+            ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
+            (duplicate ?p (price-per-night ?new-price-per-night) (days-distribution ?new-days-distribution))
+            )
+        )
+        else (if (<= (+ 0 (expand$ ?price-per-night)) ?budget) then
+            ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
+            (duplicate ?p (price-per-night ?price-per-night) (days-distribution ?days-distribution))
+        )
+    )
 
     (retract ?p))
 
@@ -529,7 +517,7 @@
             ; (printout t (km-distance (expand$ ?temp-coord-1) (expand$ ?temp-coord-2)) crlf)
         )
     )
-    ;cancello quelli pnalizzati con cf < di 0.2
+    ;cancello quelli penalizzati con cf < di 0.2
     (if (and (eq ?penalty TRUE) (> ?certainty 0.2)) then (modify ?p (certainties ?certainty) (penalty TRUE)) else (if (eq ?penalty TRUE) then (retract ?p)))
 )
 
@@ -625,85 +613,85 @@
 ;;
 ;; Modulo per gestire le domande da porre all'utente
 ;;****************
-(defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
+; (defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
 
-(deftemplate QUESTIONS::question
-    (slot travel-banchmark (default ?NONE))
-    (slot the-question (default ?NONE))
-    (multislot valid-answers (default ?NONE))
-    (slot already-asked (default FALSE));forse non serve
-    (multislot precursors));possono anche non essercene
-)
+; (deftemplate QUESTIONS::question
+;     (slot travel-banchmark (default ?NONE))
+;     (slot the-question (default ?NONE))
+;     (multislot valid-answers (default ?NONE))
+;     (slot already-asked (default FALSE));forse non serve
+;     (multislot precursors));possono anche non essercene
+; )
 
 
-;;;** REGOLE MODULO QUESTIONS **
+; ;;;** REGOLE MODULO QUESTIONS **
 
-(defrule QUESTIONS::ask-a-question
-    ?f <- (question
-;            (already-asked FALSE) ;se non ho ancora fatto la domanda
-            (precursors);se la domanda non ha precursori
-            (the-question ?the-question)
-            (travel-banchmark ?the-attribute)
-            (valid-answers $?valid-answers)
-    )
-    =>
-;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
-    (assert
-        (travel-banchmark
-            (name ?the-attribute)
-            (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
-        )
-    )
-)
+; (defrule QUESTIONS::ask-a-question
+;     ?f <- (question
+; ;            (already-asked FALSE) ;se non ho ancora fatto la domanda
+;             (precursors);se la domanda non ha precursori
+;             (the-question ?the-question)
+;             (travel-banchmark ?the-attribute)
+;             (valid-answers $?valid-answers)
+;     )
+;     =>
+; ;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
+;     (assert
+;         (travel-banchmark
+;             (name ?the-attribute)
+;             (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
+;         )
+;     )
+; )
 
 ;;;** FATTI MODULO QUESTIONS **
 
-(deffacts QUESTIONS::question-list
-    (question
-        (travel-banchmark travel-duration)
-        (the-question "Quanto deve durare il viaggio?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark travel-budget)
-        (the-question "Quanto sei disposto a spendere?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark people-number)
-        (the-question "Quante persone partecipano al viaggio?")
-        (valid-answers number);l'inserimento è obbligatorio
-    )
-    (question
-        (travel-banchmark min-resort-star)
-        (the-question "Quante stelle deve almeno avere l'hotel?")
-        (valid-answers number unknown)
-    )
-    (question
-        (travel-banchmark number-of-place)
-        (the-question "Quante mete vuoi visitare?")
-        (valid-answers number unknown)
-    )
-    (question
-        (travel-banchmark trip-type)
-        (the-question "Preferisci una vacanza culturale o rilassante?")
-        (valid-answers culturale rilassante unknown)
-    )
-    (question
-        (travel-banchmark personal-trait)
-        (the-question "Preferisci di più vivere l'avventura o la comodità?")
-        (valid-answers avventura comodità unknown)
-    )
-    (question
-        (travel-banchmark favourite-region)
-        (the-question "Quale regione preferisci?")
-        (valid-answers piemonte liguria unknown)
-    )
+; (deffacts QUESTIONS::question-list
+;     (question
+;         (travel-banchmark travel-duration)
+;         (the-question "Quanto deve durare il viaggio?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark travel-budget)
+;         (the-question "Quanto sei disposto a spendere?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark people-number)
+;         (the-question "Quante persone partecipano al viaggio?")
+;         (valid-answers number);l'inserimento è obbligatorio
+;     )
+;     (question
+;         (travel-banchmark min-resort-star)
+;         (the-question "Quante stelle deve almeno avere l'hotel?")
+;         (valid-answers number unknown)
+;     )
+;     (question
+;         (travel-banchmark number-of-place)
+;         (the-question "Quante mete vuoi visitare?")
+;         (valid-answers number unknown)
+;     )
+;     (question
+;         (travel-banchmark trip-type)
+;         (the-question "Preferisci una vacanza culturale o rilassante?")
+;         (valid-answers culturale rilassante unknown)
+;     )
+;     (question
+;         (travel-banchmark personal-trait)
+;         (the-question "Preferisci di più vivere l'avventura o la comodità?")
+;         (valid-answers avventura comodità unknown)
+;     )
+;     (question
+;         (travel-banchmark favourite-region)
+;         (the-question "Quale regione preferisci?")
+;         (valid-answers piemonte liguria unknown)
+;     )
 
-    ;unknown
-    ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
-    ;regione che non si vuole visitare? (certainty -1.0)
-)
+;     ;unknown
+;     ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
+;     ;regione che non si vuole visitare? (certainty -1.0)
+; )
 
 ;;****************
 ;;* MODULO RULES *
@@ -778,23 +766,23 @@
         (then tourism-type is culturale with certainty 0.6 and
             tourism-type is religioso with certainty 0.4 and
             tourism-type is enogastronomico with certainty 0.2 and
-            tourism-type is lacustre with certainty 0.3)
+            tourism-type is lacustre with certainty -0.2)
     )
     (rule
         (if trip-type is rilassante)
         (then tourism-type is balneare with certainty 0.4 and
             tourism-type is montano with certainty 0.4 and
-            tourism-type is sportivo with certainty 0.4 and
+            tourism-type is sportivo with certainty -0.2 and
             tourism-type is termale with certainty 0.3 and
             tourism-type is lacustre with certainty 0.3)
     )
     (rule
         (if personal-trait is avventura)
         (then tourism-type is naturalistico with certainty 0.4 and
-            tourism-type is balneare with certainty 0.1 and
-            tourism-type is sportivo with certainty 0.2 and
-            tourism-type is termale with certainty 0.4 and
-            tourism-type is lacustre with certainty 0.3)
+            tourism-type is balneare with certainty -0.2 and
+            tourism-type is sportivo with certainty -0.2 and
+            tourism-type is termale with certainty -0.2 and
+            tourism-type is lacustre with certainty 0.5)
     )
     (rule
         (if personal-trait is comodità)
@@ -805,18 +793,19 @@
     )
     (rule
         (if personal-trait is unknown)
-        (then tourism-type is balneare with certainty 0.5 and
-            tourism-type is montano with certainty 0.5 and
+        (then tourism-type is balneare with certainty -0.2 and
+            tourism-type is montano with certainty 0.2 and
+            tourism-type is religioso with certainty -0.3 and
             tourism-type is enogastronomico with certainty 0.5 and
             tourism-type is naturalistico with certainty 0.5)
     )
     (rule
         (if trip-type is unknown)
-        (then tourism-type is balneare with certainty 0.3 and
-            tourism-type is montano with certainty 0.3 and
-            tourism-type is sportivo with certainty 0.3 and
+        (then tourism-type is balneare with certainty -0.2 and
+            tourism-type is montano with certainty 0.2 and
+            tourism-type is sportivo with certainty -0.3 and
             tourism-type is termale with certainty 0.3 and
-            tourism-type is lacustre with certainty 0.3)
+            tourism-type is lacustre with certainty -0.3)
     )
     
     
