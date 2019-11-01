@@ -17,25 +17,6 @@
 (defmodule MAIN (export ?ALL))
 
 ;;;** FUNCTION MODULO MAIN **
-
-(deffunction MAIN::ask-question (?question ?allowed-values)
-    (printout t ?question);stampo la domanda
-    (bind ?answer (read));leggo la risposta "read" dell'utente
-    (if (lexemep ?answer) then (bind ?answer (lowcase ?answer)));lexemep verifica la ?answer sia una stringa o un simbolo
-    (while (and
-                (not (member ?answer ?allowed-values));la risposta non appartiene a quelle consentite
-                (not (and (integerp ?answer) (member number ?allowed-values)));la domanda accetta interi ma la risposta non lo è
-            ) do
-    
-        (printout t ?question)
-        (bind ?answer (read))
-        (if (lexemep ?answer) then (bind ?answer (lowcase ?answer)))
-        
-    )
-    
-    ?answer;return
-)
-
 (deffunction MAIN::atan2 (?y ?x)
 
     (if (> ?x 0) then (bind ?answer (atan (/ ?y ?x))))
@@ -112,14 +93,14 @@
 )
 
 (deffacts MAIN::test-fact
-   ; (travel-banchmark (name travel-duration) (value 4) (certainty 1.0))
-   ; (travel-banchmark (name travel-budget) (value 9000) (certainty 1.0))
-   ; (travel-banchmark (name people-number) (value 2) (certainty 1.0))
-   ; (travel-banchmark (name min-resort-star) (value unknown) (certainty 1.0))
-   ; (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
-   ; (travel-banchmark (name trip-type) (value unknown) (certainty 1.0))
-   ; (travel-banchmark (name personal-trait) (value unknown) (certainty 1.0))
-   ; (travel-banchmark (name favourite-region) (value unknown) (certainty 1.0))
+   (travel-banchmark (name travel-duration) (value 4) (certainty 1.0))
+   (travel-banchmark (name travel-budget) (value 4200) (certainty 1.0))
+   (travel-banchmark (name people-number) (value 2) (certainty 1.0))
+   (travel-banchmark (name min-resort-star) (value unknown) (certainty 1.0))
+   (travel-banchmark (name number-of-place) (value 3) (certainty 1.0))
+   (travel-banchmark (name trip-type) (value unknown) (certainty 1.0))
+   (travel-banchmark (name personal-trait) (value unknown) (certainty 1.0))
+   (travel-banchmark (name favourite-region) (value unknown) (certainty 1.0))
 )
 
 (deffunction MAIN::new-certainty (?c1 ?c2)
@@ -350,7 +331,7 @@
    (slot penalty (default FALSE))
 )
 
-(defrule TRIP::first-in-permutation
+(defrule TRIP::first-city
    (travel-banchmark (name location) (value ?resort-name) (certainty ?c))
    (travel-banchmark (name people-number) (value ?people-number))
 
@@ -375,7 +356,7 @@
     ))
 )
 
-(defrule TRIP::next-in-permutation
+(defrule TRIP::next-city
     (travel-banchmark (name number-of-place) (value ?k&~unknown))
     (travel-banchmark (name people-number) (value ?people-number))
 
@@ -406,16 +387,44 @@
 
 (defrule TRIP::cleanup
    (declare (salience -5))
+   (travel-banchmark (name travel-budget) (value ?budget))
    (travel-banchmark (name number-of-place) (value ?k&~unknown))
-   ?p <- (trip (place-sequence $?cities))
-   (test (< (length$ ?cities) ?k))
+   ?p <- (trip (place-sequence $?cities) (price-per-night $?price-per-night))
+   (test (or (< (length$ ?cities) ?k) (> (+ 0 (expand$ ?price-per-night)) ?budget)));eliminio un trip se non è composto da abbastanza citta e costa troppo rispetto al budget
    =>
    (retract ?p)
 )
 
-(defrule TRIP::distribute-days
+(defrule TRIP::add-remaining-days
     (travel-banchmark (name travel-duration) (value ?duration))
-    (travel-banchmark (name travel-budget) (value ?budget))
+    (travel-banchmark (name number-of-place) (value ?k&~unknown))
+
+    ?p <- (trip (place-sequence $?cities) (price-per-night $?price-per-night) (days-distribution $?days-distribution))
+
+    (test (eq (length$ ?cities) ?k))
+    (test (neq (length$ ?days-distribution) 0))
+    (test (< (+ 0 (expand$ ?days-distribution)) ?duration))
+    =>
+
+    (bind ?city-count (length$ ?cities)); Numero di città
+
+    (loop-for-count (?cnt1 1 ?city-count)
+
+        ; Aggiungo i giorni rimanenti in posizione ?cnt1
+        (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (div ?duration ?city-count) (mod ?duration ?city-count))))
+        ; (printout t ?new-days-distribution crlf)
+        ; Aggiorno il costo delle notti nel place n° ?cnt1 considerano anche i nuovi giorni appena aggiuni
+        (bind ?new-price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (div (nth$ ?cnt1 ?price-per-night) (div ?duration ?city-count)) (nth$ ?cnt1 ?new-days-distribution))))
+        (duplicate ?p (price-per-night ?new-price-per-night) (days-distribution ?new-days-distribution))
+    )
+
+    (retract ?p)
+
+)
+
+(defrule TRIP::distribute-days-fairly
+    (travel-banchmark (name travel-duration) (value ?duration))
+    ; (travel-banchmark (name travel-budget) (value ?budget))
     ?p <- (trip (place-sequence $?cities) (price-per-night $?price-per-night) (days-distribution $?days-distribution))
 
     (travel-banchmark (name number-of-place) (value ?k&~unknown))
@@ -434,28 +443,9 @@
         (bind ?price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (nth$ ?cnt1 ?price-per-night) (nth$ ?cnt1 ?days-distribution))))
     )
 
-    (if (neq (mod ?duration ?city-count) 0) then 
-        (loop-for-count (?cnt1 1 ?city-count)
-            ; Aggiungo i giorni rimanenti in posizione ?cnt1
-            (bind ?new-days-distribution (replace$ ?days-distribution ?cnt1 ?cnt1 (+ (div ?duration ?city-count) (mod ?duration ?city-count))))
-            ; (printout t ?new-days-distribution crlf)
-            ; Aggiorno il costo delle notti nel place n° ?cnt1 considerano anche i nuovi giorni appena aggiuni
-            (bind ?new-price-per-night (replace$ ?price-per-night ?cnt1 ?cnt1 (* (div (nth$ ?cnt1 ?price-per-night) (div ?duration ?city-count)) (nth$ ?cnt1 ?new-days-distribution))))
-            ; (printout t ?new-price-per-night crlf)
-
-            ; Se complessivamente non supera il budget, creo il trip
-            (if (<= (+ 0 (expand$ ?new-price-per-night)) ?budget) then
-            ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
-            (duplicate ?p (price-per-night ?new-price-per-night) (days-distribution ?new-days-distribution))
-            )
-        )
-        else (if (<= (+ 0 (expand$ ?price-per-night)) ?budget) then
-            ;duplico il fatto ?p andando a modificare price-per-night e days-distribution
-            (duplicate ?p (price-per-night ?price-per-night) (days-distribution ?days-distribution))
-        )
-    )
-
-    (retract ?p))
+    (duplicate ?p (price-per-night ?price-per-night) (days-distribution ?days-distribution))
+    (retract ?p)
+)
 
 (defmodule BUILDSOLUTION (import MAIN ?ALL) (import TRIP ?ALL) (export ?ALL))
 
@@ -521,50 +511,7 @@
     (if (and (eq ?penalty TRUE) (> ?certainty 0.2)) then (modify ?p (certainties ?certainty) (penalty TRUE)) else (if (eq ?penalty TRUE) then (retract ?p)))
 )
 
-;SCOMMENTARE se si commenta l'if per il budget all'interno di create-distributions
-; (defrule TRIP2::budget-exceeded
-;     (declare (salience -5))
-;     (travel-banchmark (name travel-budget) (value ?budget))
-;     ?p <- (trip (price-per-night $?price-per-night))
-;     (test (> (+ 0 (expand$ ?price-per-night)) ?budget))
-;     =>
-;     (retract ?p)
-; )
-
-;REGOLA CHE ELIMINA I DUPLICATI quando usavo un metodo diverso per crare le combinazioni di giorni
-; (defrule TRIP2::clean
-;     (travel-banchmark (name travel-duration) (value ?duration))
-
-;     ?p <- (trip
-;     (resort-sequence $?resorts)
-;     (place-sequence $?cities)
-;     (days-distribution $?days-distribution))
-
-;     ?p2 <- (trip
-;     (resort-sequence $?resorts)
-;     (place-sequence $?cities)
-;     (days-distribution $?days-distribution))
-
-;     (test (neq ?p ?p2))
-;     (test (= (+ 0 (expand$ ?days-distribution)) ?duration))
-;     =>
-
-;     (retract ?p)
-; )
-
 (defmodule PRINTRESULT (import MAIN ?ALL) (import TRIP ?ALL) (import BUILDSOLUTION ?ALL))
-
-;cancella tutti i ?trip della stessa place-sequence che hanno una un altro ?trip con cf + grande
-; (defrule PRINTRESULT::testiamo
-;     ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence1))
-;     (trip (place-sequence $?place-sequence2) (certainties ?certainty2&:(> ?certainty2 ?certainty)))
-;     (test (subsetp $?place-sequence1 $?place-sequence2));serve per comparare anche se gli eleme sono in posizione diversa: milano venezia toirno = torino venezia milano
-;   =>
-;   (retract ?trip)
-;   ; (printout t ?place-sequence1 crlf)
-;   ; ; (printout t ?resort-sequence crlf)
-;   ; (printout t ?certainty crlf)
-; )
 
 ;per ogni trip che non ha trip con cf più alte, elimino i trip della stessa place-sequence con cf minore
 (defrule PRINTRESULT::pick-best-trip
@@ -596,102 +543,6 @@
     )
 
 )
-
-; (defrule PRINTRESULT::final-test
-;     (declare (salience -5))
-;    ?trip <- (trip (certainties ?certainty) (place-sequence $?place-sequence))
-;    ?same <- (trip (place-sequence $?place-sequence))
-;    (test (neq ?trip ?same))
-;   =>
-;    (do-for-all-facts ((?f trip)) (and (subsetp ?f:place-sequence ?place-sequence) (neq ?trip ?f)) (retract ?f))
-;   ; (printout t ?place-sequence1 crlf)
-;   ; (printout t ?certainty crlf)
-; )
-
-;;****************
-;;* MODULO QUESTIONS *
-;;
-;; Modulo per gestire le domande da porre all'utente
-;;****************
-; (defmodule QUESTIONS (import MAIN ?ALL) (export ?ALL))
-
-; (deftemplate QUESTIONS::question
-;     (slot travel-banchmark (default ?NONE))
-;     (slot the-question (default ?NONE))
-;     (multislot valid-answers (default ?NONE))
-;     (slot already-asked (default FALSE));forse non serve
-;     (multislot precursors));possono anche non essercene
-; )
-
-
-; ;;;** REGOLE MODULO QUESTIONS **
-
-; (defrule QUESTIONS::ask-a-question
-;     ?f <- (question
-; ;            (already-asked FALSE) ;se non ho ancora fatto la domanda
-;             (precursors);se la domanda non ha precursori
-;             (the-question ?the-question)
-;             (travel-banchmark ?the-attribute)
-;             (valid-answers $?valid-answers)
-;     )
-;     =>
-; ;    (modify ?f (already-asked TRUE)) ;indica che ho posto la domanda
-;     (assert
-;         (travel-banchmark
-;             (name ?the-attribute)
-;             (value (ask-question ?the-question ?valid-answers)) ;creo un nuovo attribute con la risposta alla domanda (dopo averla chiesta con ask-question
-;         )
-;     )
-; )
-
-;;;** FATTI MODULO QUESTIONS **
-
-; (deffacts QUESTIONS::question-list
-;     (question
-;         (travel-banchmark travel-duration)
-;         (the-question "Quanto deve durare il viaggio?")
-;         (valid-answers number);l'inserimento è obbligatorio
-;     )
-;     (question
-;         (travel-banchmark travel-budget)
-;         (the-question "Quanto sei disposto a spendere?")
-;         (valid-answers number);l'inserimento è obbligatorio
-;     )
-;     (question
-;         (travel-banchmark people-number)
-;         (the-question "Quante persone partecipano al viaggio?")
-;         (valid-answers number);l'inserimento è obbligatorio
-;     )
-;     (question
-;         (travel-banchmark min-resort-star)
-;         (the-question "Quante stelle deve almeno avere l'hotel?")
-;         (valid-answers number unknown)
-;     )
-;     (question
-;         (travel-banchmark number-of-place)
-;         (the-question "Quante mete vuoi visitare?")
-;         (valid-answers number unknown)
-;     )
-;     (question
-;         (travel-banchmark trip-type)
-;         (the-question "Preferisci una vacanza culturale o rilassante?")
-;         (valid-answers culturale rilassante unknown)
-;     )
-;     (question
-;         (travel-banchmark personal-trait)
-;         (the-question "Preferisci di più vivere l'avventura o la comodità?")
-;         (valid-answers avventura comodità unknown)
-;     )
-;     (question
-;         (travel-banchmark favourite-region)
-;         (the-question "Quale regione preferisci?")
-;         (valid-answers piemonte liguria unknown)
-;     )
-
-;     ;unknown
-;     ;altre domande: regione che si vuole visitare? (se la seleziona si fa in modo che non possano esserci rules che ne considerano altre) (magari lasciare la scelta solo tra 4-5 regioni)
-;     ;regione che non si vuole visitare? (certainty -1.0)
-; )
 
 ;;****************
 ;;* MODULO RULES *
