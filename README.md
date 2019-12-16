@@ -1,4 +1,4 @@
-# CLIPS
+# CLIPS and iOS
 
 `./Rules` contains the clips files of a travel-agency project
 
