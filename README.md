@@ -1,4 +1,6 @@
-# CLIPS expert system and iOS UI
+# CLIPS and iOS
+
+Expert system written in CLIPS with an user interface written in Swift and Objective-C
 
 `./Rules` contains the clips files of a travel-agency project
 
