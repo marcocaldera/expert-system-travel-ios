@@ -1,4 +1,4 @@
-# CLIPS and iOS
+# CLIPS expert-system and iOS
 
 `./Rules` contains the clips files of a travel-agency project
 
